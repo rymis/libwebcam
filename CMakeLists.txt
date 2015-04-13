@@ -1,0 +1,20 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+PROJECT(libwebcam)
+
+INCLUDE(CheckCCompilerFlag)
+
+CHECK_C_COMPILER_FLAG("-W -Wall" CWARNS)
+IF(CWARNS)
+	ADD_COMPILE_OPTIONS(-W -Wall)
+ENDIF()
+
+CHECK_C_COMPILER_FLAG("-Wno-unused-paramete" CWARNS_E)
+IF(CWARNS_E)
+	ADD_COMPILE_OPTIONS("-Wno-unused-parameter")
+ENDIF()
+
+INCLUDE(./WebCam.cmake)
+
+ADD_SUBDIRECTORY(test)
+

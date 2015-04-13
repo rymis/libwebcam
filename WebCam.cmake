@@ -1,0 +1,14 @@
+INCLUDE(CheckIncludeFiles)
+INCLUDE(CheckLibraryExists)
+INCLUDE(CheckFunctionExists)
+
+CHECK_LIBRARY_EXISTS(v4l2 v4l2_open "libv4l2.h" HAVE_LIBV4L2)
+IF(HAVE_LIBV4L2)
+	ADD_DEFINITIONS(-DHAVE_LIBV4L2=1)
+	SET(LIBWEBCAM_LIBS v4l2)
+ELSE()
+	SET(LIBWEBCAM_LIBS ${CMAKE_DL_LIBS})
+ENDIF()
+
+
+ADD_LIBRARY(webcam v4l2.c libv4l2.c colorspace.c libwebcam.h)
