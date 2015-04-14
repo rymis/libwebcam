@@ -50,9 +50,6 @@ typedef struct webcam_private {
 	size_t img_len;
 	size_t bpl;
 
-	webcam_color_t *convert_buf;
-	size_t convert_buf_len;
-
 	webcam_format_t format;
 } priv_t;
 
@@ -229,8 +226,6 @@ void webcam_close(webcam_t *cam)
 	} else {
 		free(priv->buf);
 	}
-	free(priv->convert_buf);
-	priv->convert_buf = NULL;
 	free(priv->buffers);
 	priv->buffers = NULL;
 	priv->buffers_count = 0;
@@ -379,11 +374,14 @@ int webcam_wait_frame_cb(webcam_t *cam, webcam_frame_cb cb, void *arg, unsigned 
 			return -1;
 		}
 
+#if 0
+		/* TODO: why this happenes? */
 		if (priv->buffers[buf.index].len > priv->img_len) {
 			REINTR(rv, v4l2_ioctl(priv->fd, VIDIOC_QBUF, &buf));
 			log("Invalid frame");
 			return -1;
 		}
+#endif
 
 		cb(arg, cam, priv->format, priv->buffers[buf.index].start, priv->bpl, priv->buffers[buf.index].len);
 
@@ -697,17 +695,9 @@ static int process_image(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pi
 	priv_t *priv = cam->priv;
 	size_t tosz = cam->width * cam->height * sizeof(webcam_color_t);
 
-	if (priv->format != WEBCAM_RGB32) {
-		if (!priv->convert_buf) {
-			priv->convert_buf = calloc(cam->width * cam->height, sizeof(webcam_color_t));
-			if (priv->convert_buf)
-				priv->convert_buf_len = cam->width * cam->height;
-		}
-	}
-
 	return webcam_convert_image(cam->width, cam->height,
 			priv->format, bpl, pixels, img_len,
 			WEBCAM_RGB32, cam->width * sizeof(webcam_color_t), cam->image, &tosz,
-			priv->convert_buf, priv->convert_buf_len);
+			NULL, 0);
 }
 
