@@ -1,6 +1,19 @@
 #include "libwebcam.h"
 #include <string.h>
 
+#define DEBUG 1
+
+#ifdef DEBUG
+
+#include <stdio.h>
+#define log printf
+
+#else
+
+#define log(...) (void)0
+
+#endif
+
 /* Colorspace conversion functions */
 
 struct cs {
@@ -70,6 +83,7 @@ int webcam_convert_image(unsigned width, unsigned height,
 	if (!f_cs) {
 		return -1;
 	}
+	log("found from format: %d\n", from_cs);
 
 	for (i = 0; i < formats_cnt; i++) {
 		if (formats[i].id == to_cs) {
@@ -80,18 +94,21 @@ int webcam_convert_image(unsigned width, unsigned height,
 	if (!t_cs) {
 		return -1;
 	}
+	log("found to format: %d\n", to_cs);
 
 	sz = f_cs->get_size(width, height, from_bpl);
 	if (sz > from_size) {
 		/* Invalid image */
 		return -1;
 	}
+	log("from image size: %lu\n", (unsigned long)sz);
 
 	sz = t_cs->get_size(width, height, to_bpl);
 	if (!to_pixels) {
 		*to_size = sz;
 		return 0;
 	}
+	log("to image size: %lu\n", (unsigned long)sz);
 
 	if (*to_size < sz) {
 		*to_size = sz;
@@ -99,10 +116,12 @@ int webcam_convert_image(unsigned width, unsigned height,
 	}
 	*to_size = sz; /* We can forget about size now :) */
 
-	if (f_cs == WEBCAM_RGB32) { /* We only need to call one function */
+	if (from_cs == WEBCAM_RGB32) { /* We only need to call one function */
+		log("From is RGB32 - simple!\n");
 		t_cs->convert_from_rgb(width, height, from_bpl, from_pixels, to_pixels);
 		return 0;
-	} else if (t_cs == WEBCAM_RGB32) {
+	} else if (to_cs == WEBCAM_RGB32) {
+		log("To is RGB32 - simple!\n");
 		f_cs->convert_to_rgb(width, height, to_bpl, from_pixels, to_pixels);
 		return 0;
 	}
@@ -166,45 +185,58 @@ static size_t rgb32_f(unsigned width, unsigned height, size_t bpl, webcam_color_
 	return l;
 }
 
+#define COL(c) ((webcam_color_t)(c))
 
 /***********************************************************************/
 /* RGB24                                                               */
 /***********************************************************************/
 static size_t rgb24_sz(unsigned width, unsigned height, size_t bpl)
 {
+	if (bpl >= width * 3)
+		return bpl * height;
+
 	return width * height * 3;
 }
 
 static size_t rgb24_t(unsigned width, unsigned height, size_t bpl, void *from, webcam_color_t *out)
 {
-	size_t l = width * height;
+	size_t y;
 	size_t i, j;
 	unsigned char *C = from;
 
-	for (i = 0; i < l; i++) {
-		j = i * 3;
-		out[i] = (C[j] << 16) || (C[j + 1] << 8) || C[j + 2];
+	if (bpl < width * 3) {
+		bpl = width * 3;
 	}
 
-	return l * 3;
+	for (y = 0; y < height; y++) {
+		for (i = 0; i < width; i++) {
+			j = bpl * y + i * 3;
+			out[y * width + i] = (COL(C[j]) << 16) || (COL(C[j + 1]) << 8) || COL(C[j + 2]);
+		}
+	}
+
+	return rgb24_sz(width, height, bpl);
 }
 
 static size_t rgb24_f(unsigned width, unsigned height, size_t bpl, webcam_color_t *from, void *out)
 {
-	size_t l = width * height;
+	size_t y;
 	size_t i, j;
 	unsigned char *C = out;
 	webcam_color_t col;
+	size_t idx = 0;
 
-	for (i = 0; i < l; i++) {
-		j = i * 3;
-		col = from[i];
-		C[j++] = (col >> 16) & 0xff;
-		C[j++] = (col >>  8) & 0xff;
-		C[j++] = (col      ) & 0xff;
+	for (y = 0; y < height; y++) {
+		for (i = 0; i < width; i++) {
+			col = from[idx++];
+			j = bpl * y + i * 3;
+			C[j++] = (col >> 16) & 0xff;
+			C[j++] = (col >>  8) & 0xff;
+			C[j++] = (col      ) & 0xff;
+		}
 	}
 
-	return l * 3;
+	return rgb24_sz(width, height, bpl);
 }
 
 /***********************************************************************/

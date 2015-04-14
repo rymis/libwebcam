@@ -544,13 +544,14 @@ static int init_cam(webcam_t *cam, const char *devname)
 				if (fmtdesc.pixelformat == v4l_formats[j].v4l_fmt) {
 					priv->format = v4l_formats[j].fmt;
 					fmt.fmt.pix.pixelformat = fmtdesc.pixelformat;
+					break;
 				}
 			}
 		}
 	}
 
-	if (!fmtdesc.pixelformat) {
-		fmtdesc.pixelformat = V4L2_PIX_FMT_RGB24;
+	if (!fmt.fmt.pix.pixelformat) {
+		fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
 	}
 
 	/* Querry for video format: */
@@ -699,9 +700,25 @@ static void process_image(void *ctx, webcam_t *cam, webcam_format_t fmt, void *p
 	priv_t *priv = cam->priv;
 	size_t tosz = cam->width * cam->height * sizeof(webcam_color_t);
 
-	webcam_convert_image(cam->width, cam->height,
+	if (webcam_convert_image(cam->width, cam->height,
 			priv->format, bpl, pixels, img_len,
 			WEBCAM_RGB32, cam->width * sizeof(webcam_color_t), cam->image, &tosz,
-			NULL, 0);
+			NULL, 0)) {
+		log("Converter error");
+	}
+
+{
+	unsigned i, j;
+	unsigned char *P = pixels;
+
+	for (j = 0; j < cam->height; j++) {
+		for (i = 0; i < cam->width; i++) {
+			cam->image[j * cam->width + i] = webcam_color_rgb(
+					P[j * priv->bpl + i],
+					P[j * priv->bpl + i + 1],
+					P[j * priv->bpl + i + 2]);
+		}
+	}
+}
 }
 
