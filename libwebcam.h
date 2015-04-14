@@ -62,7 +62,7 @@ typedef struct webcam {
 	/* img contains uint32_t's in form 0x00rrggbb */
 } webcam_t;
 
-typedef int (*webcam_frame_cb)(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pixels, size_t bpl, size_t size);
+typedef void (*webcam_frame_cb)(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pixels, size_t bpl, size_t size);
 
 /* List all cameras connected */
 int webcam_list(int *ids, unsigned *cnt);
