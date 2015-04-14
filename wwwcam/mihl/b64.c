@@ -47,14 +47,18 @@
  *  @param[out] out output buffer
  *  @param length of the block  
  */
-static void encodeblock( uint8_t in[3], uint8_t out[4], int len ) {
-    static const char cb64[]=
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    out[0] = cb64[ in[0] >> 2 ];
-    out[1] = cb64[ ((in[0] & 0x03) << 4) | ((in[1] & 0xf0) >> 4) ];
-    out[2] = (uint8_t) (len > 1 ? cb64[ ((in[1] & 0x0f) << 2) | ((in[2] & 0xc0) >> 6) ] : '=');
-    out[3] = (uint8_t) (len > 2 ? cb64[ in[2] & 0x3f ] : '=');
-}								// encodeblock
+static void encodeblock(uint8_t in[3], uint8_t out[4], int len)
+{
+	static const char cb64[] =
+	    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	out[0] = cb64[in[0] >> 2];
+	out[1] = cb64[((in[0] & 0x03) << 4) | ((in[1] & 0xf0) >> 4)];
+	out[2] =
+	    (uint8_t) (len >
+		       1 ? cb64[((in[1] & 0x0f) << 2) | ((in[2] & 0xc0) >> 6)] :
+		       '=');
+	out[3] = (uint8_t) (len > 2 ? cb64[in[2] & 0x3f] : '=');
+}				// encodeblock
 
 /**
  * Base64 encode function.
@@ -64,30 +68,34 @@ static void encodeblock( uint8_t in[3], uint8_t out[4], int len ) {
  * @param[out] Buffer to store the Base64 encoded output string
  * @param maxlen Max length for the encoded output string
  */
-void mihl_base64_encode( char const *bin, size_t size, char *bout, size_t maxlen ) {
+void mihl_base64_encode(char const *bin, size_t size, char *bout, size_t maxlen)
+{
 
 	unsigned index;
 	int i;
-    memset( bout, 0, maxlen );
-    int bi = 0;
-    for ( index = 0; index < size; ) {
-        uint8_t in[3], out[4];
-        int len = 0;
-        for( i = 0; i < 3; i++ ) {
-            in[i] = (uint8_t) bin[index++];
-            if( index <= size )
-                len++;
-            else
-                in[i] = 0;
-        }
-        if( len ) {
-            encodeblock( in, out, len );
-            for( i = 0; i < 4; i++ )
-                bout[bi++] = out[i];
-        }
-    }
 
-}                               // mihl_base64_encode
+	memset(bout, 0, maxlen);
+	int bi = 0;
+
+	for (index = 0; index < size;) {
+		uint8_t in[3], out[4];
+		int len = 0;
+
+		for (i = 0; i < 3; i++) {
+			in[i] = (uint8_t) bin[index++];
+			if (index <= size)
+				len++;
+			else
+				in[i] = 0;
+		}
+		if (len) {
+			encodeblock(in, out, len);
+			for (i = 0; i < 4; i++)
+				bout[bi++] = out[i];
+		}
+	}
+
+}				// mihl_base64_encode
 
 /**
  * Utility function for Content-Transfer-Encoding standard described in RFC1113
@@ -97,10 +105,11 @@ void mihl_base64_encode( char const *bin, size_t size, char *bout, size_t maxlen
  * @param[out] out output buffer
  * @param length of the block  
  */
-static void decodeblock( uint8_t in[4], uint8_t out[3] ) {   
-    out[ 0 ] = (uint8_t ) (in[0] << 2 | in[1] >> 4);
-    out[ 1 ] = (uint8_t ) (in[1] << 4 | in[2] >> 2);
-    out[ 2 ] = (uint8_t ) (((in[2] << 6) & 0xc0) | in[3]);
+static void decodeblock(uint8_t in[4], uint8_t out[3])
+{
+	out[0] = (uint8_t) (in[0] << 2 | in[1] >> 4);
+	out[1] = (uint8_t) (in[1] << 4 | in[2] >> 2);
+	out[2] = (uint8_t) (((in[2] << 6) & 0xc0) | in[3]);
 }
 
 /**
@@ -111,31 +120,34 @@ static void decodeblock( uint8_t in[4], uint8_t out[3] ) {
  * @param[out] Buffer to store the decoded output string
  * @param maxlen Max length for the decoded output string
  */
-void mihl_base64_decode( char const *bin, size_t size, char *bout, size_t maxlen ) {
-	static const char cd64[]=
-		"|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$XYZ[\\]^_`abcdefghijklmnopq";
+void mihl_base64_decode(char const *bin, size_t size, char *bout, size_t maxlen)
+{
+	static const char cd64[] =
+	    "|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$XYZ[\\]^_`abcdefghijklmnopq";
 	unsigned index;
 	int i;
 
-    memset( bout, 0, maxlen );
-    int bi = 0;
-    for ( index = 0; index < size; ) {
-	    uint8_t in[4], out[3];
-	    for( i = 0; i < 4; i++, index++ ) {
-            if ( index < size ) {
-		    	uint8_t v = (uint8_t) bin[index];
-		    	v = ((v < 43) || (v > 122)) ? 0 : cd64[v-43];
-		    	if ( v )
-		    		v = (v == '$') ? 0 : v-61;
-		    	in[i] = (v) ? v-1 : 0;
-            }
-            else {
-            	in[i] = 0;
-            }
-	    }
-       	decodeblock( in, out ); 
-       	for( i = 0; i < 3; i++ )
-       		bout[bi++] = out[i];
-    }							// for (index)
-    bout[bi++] = 0;
-}								// mihl_base64_encode
+	memset(bout, 0, maxlen);
+	int bi = 0;
+
+	for (index = 0; index < size;) {
+		uint8_t in[4], out[3];
+
+		for (i = 0; i < 4; i++, index++) {
+			if (index < size) {
+				uint8_t v = (uint8_t) bin[index];
+
+				v = ((v < 43) || (v > 122)) ? 0 : cd64[v - 43];
+				if (v)
+					v = (v == '$') ? 0 : v - 61;
+				in[i] = (v) ? v - 1 : 0;
+			} else {
+				in[i] = 0;
+			}
+		}
+		decodeblock(in, out);
+		for (i = 0; i < 3; i++)
+			bout[bi++] = out[i];
+	}			// for (index)
+	bout[bi++] = 0;
+}				// mihl_base64_encode
