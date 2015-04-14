@@ -145,13 +145,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	mihl_handle_get(ctx, "/", http_root, NULL);
-	if (access("../image.jpg", R_OK) == 0)
-		mihl_handle_file(ctx, "/image.jpg", "../image.jpg",
-				 "image/jpeg", 0);
-	else
-		mihl_handle_file(ctx, "/image.jpg",
-				 "/etc/mihl/examples/2/image.jpg", "image/jpeg",
-				 0);
+	mihl_handle_file(ctx, "/image.jpg", "./image.jpg", "image/jpeg", 0);
 	mihl_handle_post(ctx, "/toto1", http_root_post, NULL);
 
 	for (;;) {
@@ -159,9 +153,12 @@ int main(int argc, char *argv[])
 
 		if (status == -2)
 			break;
-		if (peek_key(ctx))
+		if (exit_now)
 			break;
 	}
+
+	mihl_end(ctx);
+	printf("EXIT!\n");
 
 	return 0;
 }				// main

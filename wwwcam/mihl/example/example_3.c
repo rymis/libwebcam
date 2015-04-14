@@ -203,28 +203,20 @@ int main(int argc, char *argv[])
 
 	*data2 = 2;
 	mihl_handle_get(ctx, "/data3", http_data, data2);
-	if (access("../image.jpg", R_OK) == 0) {
-		mihl_handle_file(ctx, "/image.jpg", "../image.jpg",
-				 "image/jpeg", 0);
-		mihl_handle_file(ctx, "/prototype.js", "../prototype.js",
-				 "text/javascript", 0);
-	} else {
-		mihl_handle_file(ctx, "/image.jpg",
-				 "/etc/mihl/examples/3/image.jpg", "image/jpeg",
-				 0);
-		mihl_handle_file(ctx, "/prototype.js",
-				 "/etc/mihl/examples/3/prototype.js",
-				 "text/javascript", 0);
-	}
+	mihl_handle_file(ctx, "/image.jpg", "./image.jpg", "image/jpeg", 0);
+	mihl_handle_file(ctx, "/prototype.js", "./prototype.js", "text/javascript", 0);
 
 	for (;;) {
 		int status = mihl_server(ctx);
 
 		if (status == -2)
 			break;
-		if (peek_key(ctx))
+		if (exit_now)
 			break;
 	}
+
+	mihl_end(ctx);
+	printf("EXIT!\n");
 
 	return 0;
 }				// main

@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 
 	help(8080);
 
-	mihl_ctx_t *ctx = mihl_init(NULL, 8080, 1,
+	mihl_ctx_t *ctx = mihl_init(NULL, 8080, 4,
 				    MIHL_LOG_DEBUG | MIHL_LOG_ERROR |
 				    MIHL_LOG_WARNING | MIHL_LOG_INFO |
 				    MIHL_LOG_INFO_VERBOSE);
@@ -282,13 +282,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	mihl_handle_get(ctx, "/", http_root, NULL);
-	if (access("../image.jpg", R_OK) == 0)
-		mihl_handle_file(ctx, "/image.jpg", "../image.jpg",
-				 "image/jpeg", 0);
-	else
-		mihl_handle_file(ctx, "/image.jpg",
-				 "/etc/mihl/examples/1/image.jpg", "image/jpeg",
-				 0);
+	mihl_handle_file(ctx, "/image.jpg", "./image.jpg", "image/jpeg", 0);
 	mihl_handle_get(ctx, "/nextpage.html", http_nextpage1, NULL);
 	mihl_handle_get(ctx, "/index.html", http_index, NULL);
 	mihl_handle_get(ctx, "/protected.html", http_protected, NULL);
@@ -298,9 +292,13 @@ int main(int argc, char *argv[])
 
 		if (status == -2)
 			break;
-		if (peek_key(ctx))
+
+		if (exit_now)
 			break;
 	}
+
+	mihl_end(ctx);
+	printf("Exit!\n");
 
 	return 0;
 }

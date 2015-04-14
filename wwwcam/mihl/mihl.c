@@ -956,6 +956,7 @@ int mihl_log(mihl_ctx_t * ctx, unsigned level, const char *fmt, ...)
 {
 	va_list ap;
 	char buf[256];
+	int i;
 
 	if (!(level & ctx->log_level))
 		return 0;
@@ -963,6 +964,9 @@ int mihl_log(mihl_ctx_t * ctx, unsigned level, const char *fmt, ...)
 	va_start(ap, fmt);
 	if (mihl_log_callback) {
 		vsnprintf(buf, sizeof(buf), fmt, ap);
+		for (i = 0; buf[i]; i++)
+			if (buf[i] < ' ')
+				buf[i] = ' ';
 		mihl_log_callback(level, buf);
 	} else {
 		vsyslog(LOG_INFO, fmt, ap);
