@@ -53,9 +53,6 @@ typedef struct webcam {
 	/* Name of the camera. */
 	char *name;
 
-	webcam_format_t *formats;
-	unsigned formats_cnt;
-
 	/* Width and height of the image: */
 	unsigned width, height;
 
