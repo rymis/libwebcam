@@ -31,8 +31,8 @@
 typedef struct migl_handle {
     char *tag;                      ///< Tag, such as "/" 
     int partial;                    ///< If 0, do strcmp(), else strncmp(partial)
-    mihl_pf_handle_get_t *pf_get;   ///< If not NULL, function to execute
-    mihl_pf_handle_post_t *pf_post; ///< If not NULL, function to execute
+    mihl_pf_handle_get_t pf_get;   ///< If not NULL, function to execute
+    mihl_pf_handle_post_t pf_post; ///< If not NULL, function to execute
     char *filename;                 ///< If not NULL, filename to send
     char *content_type;             ///< Content-type, such as "image/jpeg" or "text/javascript"
     int close_connection;           ///< Should we close the connection after the operation ?

@@ -27,11 +27,14 @@ typedef struct mihl_ctx mihl_ctx_t;
 
 typedef struct mihl_cnx mihl_cnx_t;
 
-typedef int (mihl_pf_handle_get_t) (mihl_cnx_t *, char const *, char const *,
+typedef int (*mihl_pf_handle_get_t)(mihl_cnx_t *, char const *, char const *,
 				    void *);
 
-typedef int (mihl_pf_handle_post_t) (mihl_cnx_t *, char const *, char const *,
+typedef int (*mihl_pf_handle_post_t)(mihl_cnx_t *, char const *, char const *,
 				     int, char **, char **, void *);
+
+typedef void (*mihl_log_callback_t)(int level, const char *msg);
+extern mihl_log_callback_t mihl_log_callback;
 
 mihl_ctx_t *mihl_get_ctx(mihl_cnx_t * cnx);
 
@@ -50,10 +53,10 @@ int mihl_send(mihl_cnx_t * cnx, char const *answer, char const *fmt_header,
 	      ...);
 
 int mihl_handle_get(mihl_ctx_t * ctx, char const *tag,
-		    mihl_pf_handle_get_t * pf, void *param);
+		    mihl_pf_handle_get_t pf, void *param);
 
 int mihl_handle_post(mihl_ctx_t * ctx, char const *tag,
-		     mihl_pf_handle_post_t * pf, void *param);
+		     mihl_pf_handle_post_t pf, void *param);
 
 int mihl_handle_file(mihl_ctx_t * ctx, char const *tag, char const *filename,
 		     char const *content_type, int close_connection);

@@ -717,7 +717,7 @@ static int manage_timedout_connexions(mihl_ctx_t * ctx, time_t now)
  *  - or -1 if an error occurred (errno is then set)
  */
 static int mihl_handle_get_add(mihl_ctx_t * ctx, char const *tag,
-			       mihl_pf_handle_get_t * pf, void *param)
+			       mihl_pf_handle_get_t pf, void *param)
 {
 	if (ctx->handles == NULL)
 		ctx->handles = (mihl_handle_t *) malloc(sizeof(mihl_handle_t));
@@ -764,7 +764,7 @@ static int mihl_handle_get_add(mihl_ctx_t * ctx, char const *tag,
  *  - or -1 if an error occurred (errno is then set)
  */
 int mihl_handle_get(mihl_ctx_t * ctx, char const *tag,
-		    mihl_pf_handle_get_t * pf, void *param)
+		    mihl_pf_handle_get_t pf, void *param)
 {
 
 	// Is there already a handler installed for this tag ?
@@ -820,7 +820,7 @@ int mihl_handle_get(mihl_ctx_t * ctx, char const *tag,
  *  - or -1 if an error occurred (errno is then set)
  */
 int mihl_handle_post(mihl_ctx_t * ctx, char const *tag,
-		     mihl_pf_handle_post_t * pf, void *param)
+		     mihl_pf_handle_post_t pf, void *param)
 {
 	if (tag == NULL)
 		return -1;
@@ -942,6 +942,7 @@ mihl_log_level_t mihl_get_log_level(mihl_ctx_t * ctx)
 	return ctx->log_level;
 }				// mihl_get_log_level
 
+mihl_log_callback_t mihl_log_callback = NULL;
 /**
  * TBD 
  * 
@@ -953,12 +954,19 @@ mihl_log_level_t mihl_get_log_level(mihl_ctx_t * ctx)
  */
 int mihl_log(mihl_ctx_t * ctx, unsigned level, const char *fmt, ...)
 {
+	va_list ap;
+	char buf[256];
+
 	if (!(level & ctx->log_level))
 		return 0;
-	va_list ap;
 
 	va_start(ap, fmt);
-	vsyslog(LOG_INFO, fmt, ap);
+	if (mihl_log_callback) {
+		vsnprintf(buf, sizeof(buf), fmt, ap);
+		mihl_log_callback(level, buf);
+	} else {
+		vsyslog(LOG_INFO, fmt, ap);
+	}
 	va_end(ap);
 	return 0;
 }				// mihl_log
