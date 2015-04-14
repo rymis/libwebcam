@@ -66,12 +66,14 @@ static void encodeblock( uint8_t in[3], uint8_t out[4], int len ) {
  */
 void mihl_base64_encode( char const *bin, size_t size, char *bout, size_t maxlen ) {
 
+	unsigned index;
+	int i;
     memset( bout, 0, maxlen );
     int bi = 0;
-    for ( unsigned index = 0; index < size; ) {
+    for ( index = 0; index < size; ) {
         uint8_t in[3], out[4];
         int len = 0;
-        for( int i = 0; i < 3; i++ ) {
+        for( i = 0; i < 3; i++ ) {
             in[i] = (uint8_t) bin[index++];
             if( index <= size )
                 len++;
@@ -80,7 +82,7 @@ void mihl_base64_encode( char const *bin, size_t size, char *bout, size_t maxlen
         }
         if( len ) {
             encodeblock( in, out, len );
-            for( int i = 0; i < 4; i++ )
+            for( i = 0; i < 4; i++ )
                 bout[bi++] = out[i];
         }
     }
@@ -112,11 +114,14 @@ static void decodeblock( uint8_t in[4], uint8_t out[3] ) {
 void mihl_base64_decode( char const *bin, size_t size, char *bout, size_t maxlen ) {
 	static const char cd64[]=
 		"|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$XYZ[\\]^_`abcdefghijklmnopq";
+	unsigned index;
+	int i;
+
     memset( bout, 0, maxlen );
     int bi = 0;
-    for ( unsigned index = 0; index < size; ) {
+    for ( index = 0; index < size; ) {
 	    uint8_t in[4], out[3];
-	    for( int i = 0; i < 4; i++, index++ ) {
+	    for( i = 0; i < 4; i++, index++ ) {
             if ( index < size ) {
 		    	uint8_t v = (uint8_t) bin[index];
 		    	v = ((v < 43) || (v > 122)) ? 0 : cd64[v-43];
@@ -129,7 +134,7 @@ void mihl_base64_decode( char const *bin, size_t size, char *bout, size_t maxlen
             }
 	    }
        	decodeblock( in, out ); 
-       	for( int i = 0; i < 3; i++ )
+       	for( i = 0; i < 3; i++ )
        		bout[bi++] = out[i];
     }							// for (index)
     bout[bi++] = 0;

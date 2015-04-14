@@ -74,6 +74,7 @@ static int too_many_connexions( int sockfd, char const *host ) {
  */
 static int add_new_connexion( mihl_ctx_t *ctx, int sockfd, struct sockaddr_in *client_addr ) {
 
+	int ncnx;
     // Find a new slot to store the new active connexion
     if ( ctx->nb_connexions == ctx->maxnb_cnx ) {
 oops:;
@@ -85,7 +86,7 @@ oops:;
         return -1;
     }
     mihl_cnx_t *cnx = NULL;
-    for ( int ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
+    for (ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
         cnx = &ctx->connexions[ncnx];
         if ( !cnx->active )
             break;
@@ -242,7 +243,9 @@ static int page_not_found( mihl_cnx_t *cnx, char const *tag, char const *host, v
  * 
  * @note Besides internal library initializations, this function performs bind() then listen().
  */
-mihl_ctx_t *mihl_init( char const *bind_addr, int port, int maxnb_cnx, unsigned log_level ) {
+mihl_ctx_t *mihl_init( char const *bind_addr, int port, int maxnb_cnx, unsigned log_level )
+{
+	int ncnx;
 	
     mihl_ctx_t *ctx = (mihl_ctx_t *)malloc( sizeof(mihl_ctx_t) );
     if ( ctx == NULL )
@@ -261,7 +264,7 @@ mihl_ctx_t *mihl_init( char const *bind_addr, int port, int maxnb_cnx, unsigned 
         free( ctx );
         return NULL;
     }
-    for ( int ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
+    for (ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
         mihl_cnx_t *cnx = &ctx->connexions[ncnx];
         cnx->ctx = ctx;
         cnx->active = 0;
@@ -377,9 +380,10 @@ int send_file( mihl_cnx_t *cnx, char const *tag, char const *filename, char *con
  * @return TBD
  */
 static int search_for_handle( mihl_cnx_t *cnx, char const *tag, char *host, int nb_variables, char **vars_names, char **vars_values ) {
+	int n;
     mihl_ctx_t *ctx = cnx->ctx;
     mihl_handle_t *handle_nfound = NULL;
-    for ( int n = 0; n < ctx->nb_handles; n++ ) {
+    for ( n = 0; n < ctx->nb_handles; n++ ) {
         mihl_handle_t *handle = &ctx->handles[n];
         if ( !handle->tag ) {
             handle_nfound = handle;
@@ -442,6 +446,7 @@ static int manage_new_connexions( mihl_ctx_t *ctx, time_t now ) {
 static int got_data_for_active_connexion( mihl_cnx_t *cnx ) {
 
     mihl_ctx_t *ctx = cnx->ctx;
+    int n;
     int len = 0;
     for (;;) {
     	int l = tcp_read( cnx->sockfd, &ctx->read_buffer[len], ctx->read_buffer_maxlen-len );
@@ -538,7 +543,7 @@ fclose( fp );
         nb_variables, vars_names, vars_values );
         
     // Clean-up keys/values pairs
-    for ( int n = 0; n < nb_options; n++ ) {
+    for ( n = 0; n < nb_options; n++ ) {
         free( options_names[n] );
         free( options_values[n] );
     }
@@ -554,6 +559,7 @@ fclose( fp );
  * @return TBD
  */
 static int manage_existent_connexions( mihl_ctx_t *ctx, time_t now ) {
+	int ncnx;
 
 	// Do nothing if there no active connexion
     if ( ctx->nb_connexions == 0 )
@@ -562,7 +568,7 @@ static int manage_existent_connexions( mihl_ctx_t *ctx, time_t now ) {
     int last_sockfd = -1;
 	fd_set ready;
 	FD_ZERO( &ready );
-    for ( int ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
+    for ( ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
         mihl_cnx_t *cnx = &ctx->connexions[ncnx];
         if ( !cnx->active )
             continue;
@@ -579,7 +585,7 @@ static int manage_existent_connexions( mihl_ctx_t *ctx, time_t now ) {
         return 0;
 	assert( status != -1 );
 
-    for ( int ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
+    for ( ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
         mihl_cnx_t *cnx = &ctx->connexions[ncnx];
         if ( !cnx->active )
             continue;
@@ -599,7 +605,8 @@ static int manage_existent_connexions( mihl_ctx_t *ctx, time_t now ) {
  * @return TBD
  */
 static int manage_timedout_connexions( mihl_ctx_t *ctx, time_t now ) {
-    for ( int ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
+	int ncnx;
+    for ( ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
         mihl_cnx_t *cnx = &ctx->connexions[ncnx];
         if ( !cnx->active )
             continue;
@@ -672,7 +679,9 @@ int mihl_handle_get( mihl_ctx_t *ctx, char const *tag, mihl_pf_handle_get_t *pf,
 
 	// Is there already a handler installed for this tag ?
     mihl_handle_t *handle_found = NULL;
-    for ( int n = 0; n < ctx->nb_handles; n++ ) {
+    int n;
+
+    for ( n = 0; n < ctx->nb_handles; n++ ) {
         mihl_handle_t *handle = &ctx->handles[n];
         if ( handle->pf_post || handle->filename || !handle->pf_get )
         	continue;
@@ -852,6 +861,7 @@ int mihl_log( mihl_ctx_t *ctx, unsigned level, const char *fmt, ... ) {
  */
 int mihl_dump_info( mihl_ctx_t *ctx ) {
     unsigned level = ctx->log_level;
+    int ncnx;
     ctx->log_level = MIHL_LOG_ERROR | MIHL_LOG_WARNING | MIHL_LOG_INFO |
         MIHL_LOG_INFO_VERBOSE | MIHL_LOG_DEBUG;
     mihl_log( ctx, MIHL_LOG_DEBUG, "%d active connexions", ctx->nb_connexions );
@@ -859,7 +869,7 @@ int mihl_dump_info( mihl_ctx_t *ctx ) {
         return 0;
     mihl_log( ctx, MIHL_LOG_DEBUG, "Sockfd Client               Start Inact Last Request" );
     time_t now = time( NULL );
-    for ( int ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
+    for ( ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
         mihl_cnx_t *cnx = &ctx->connexions[ncnx];
         if ( cnx->active ) {
             char client[20+1];
@@ -888,10 +898,11 @@ int mihl_dump_info( mihl_ctx_t *ctx ) {
  * 	- or -1 if an error occurred (errno is then set).
  */
 int mihl_info( mihl_ctx_t *ctx, int maxnb_cnxinfos, mihl_cnxinfo_t *infos ) {
+	int ncnx;
     if ( maxnb_cnxinfos <= 0 )
         return 0;
     int nb_cnxinfos = 0;
-    for ( int ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
+    for ( ncnx = 0; ncnx < ctx->maxnb_cnx; ncnx++ ) {
         mihl_cnx_t *cnx = &ctx->connexions[ncnx];
         if ( !cnx->active ) 
             continue;
@@ -910,11 +921,13 @@ int mihl_info( mihl_ctx_t *ctx, int maxnb_cnxinfos, mihl_cnxinfo_t *infos ) {
  */
 int mihl_dump_info_handlers( mihl_ctx_t *ctx ) {
     unsigned level = ctx->log_level;
+    int n;
+
     ctx->log_level = MIHL_LOG_ERROR | MIHL_LOG_WARNING | MIHL_LOG_INFO |
         MIHL_LOG_INFO_VERBOSE | MIHL_LOG_DEBUG;
     mihl_log( ctx, MIHL_LOG_DEBUG, "%d handles", ctx->nb_handles );
     mihl_log( ctx, MIHL_LOG_DEBUG, "   %-32s %-32s", "Tag", "Type" );
-    for ( int n = 0; n < ctx->nb_handles; n++ ) {
+    for ( n = 0; n < ctx->nb_handles; n++ ) {
         mihl_handle_t *handle = &ctx->handles[n];
         char tag[32];
         memset( tag, 0, sizeof(tag) );

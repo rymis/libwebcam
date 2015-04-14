@@ -156,6 +156,7 @@ int tcp_write( int sockfd, const char *buff, int buff_len ) {
 void decode_keys_values( mihl_cnx_t *cnx, char *_request,  
     int *nb_options, char *options_names[], char *options_values[], int maxnb_options,
     int *nb_variables, char *vars_names[], char *vars_values[], int maxnb_values ) {
+	int n;
 	
     *nb_options = 0;
     *nb_variables = 0;
@@ -213,7 +214,7 @@ void decode_keys_values( mihl_cnx_t *cnx, char *_request,
     free(request);
     request = NULL;
 
-    for ( int n = 0; n < *nb_options; n++ ) {
+    for ( n = 0; n < *nb_options; n++ ) {
         char *key = options_names[n];
         char *value = options_values[n];
 //      printf( "    %d: '%s' : '%s'\n", n, key, value );
