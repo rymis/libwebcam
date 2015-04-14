@@ -57,7 +57,7 @@ typedef struct webcam_private {
 } priv_t;
 
 static int init_cam(webcam_t *cam, const char *devname);
-static int process_image(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pixels, size_t bpl, size_t img_len);
+static void process_image(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pixels, size_t bpl, size_t img_len);
 
 /* Count all cameras connected */
 int webcam_list(int *ids, unsigned *count)
@@ -363,6 +363,8 @@ int webcam_wait_frame_cb(webcam_t *cam, webcam_frame_cb cb, void *arg, unsigned 
 		}
 
 		cb(arg, cam, priv->format, priv->buf, priv->bpl, rv);
+
+		return 1;
 	} else if (priv->io_method == IO_METHOD_MMAP) {
 		memset(&buf, 0, sizeof(buf));
 		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -388,12 +390,14 @@ int webcam_wait_frame_cb(webcam_t *cam, webcam_frame_cb cb, void *arg, unsigned 
 		cb(arg, cam, priv->format, priv->buffers[buf.index].start, priv->bpl, priv->buffers[buf.index].len);
 
 		REINTR(rv, v4l2_ioctl(priv->fd, VIDIOC_QBUF, &buf));
+
+		return 1;
 	} else {
 		log("Invalid IO method");
 		return -1;
 	}
 
-	return 1;
+	return -1; /* Not reached */
 }
 
 /* Set control to camera. Value must be in interval [0-100] */
@@ -692,7 +696,7 @@ static int init_read(webcam_t *cam)
 	return 0;
 }
 
-static int process_image(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pixels, size_t bpl, size_t img_len)
+static void process_image(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pixels, size_t bpl, size_t img_len)
 {
 	priv_t *priv = cam->priv;
 	size_t tosz = cam->width * cam->height * sizeof(webcam_color_t);
@@ -705,7 +709,7 @@ static int process_image(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pi
 		}
 	}
 
-	return webcam_convert_image(cam->width, cam->height,
+	webcam_convert_image(cam->width, cam->height,
 			priv->format, bpl, pixels, img_len,
 			WEBCAM_RGB32, cam->width * sizeof(webcam_color_t), cam->image, &tosz,
 			priv->convert_buf, priv->convert_buf_len);

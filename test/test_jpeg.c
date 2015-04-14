@@ -130,12 +130,14 @@ int main(int argc, char **argv)
 	webcam_start(w);
 
 	for (;;) {
-		if (webcam_wait_frame(w, 10) > 0) {
+		if (webcam_wait_frame(w, 100) > 0) {
 			printf("Storing frame %d\n", i);
 			sprintf(fn, "frame_%d.%s", i, USE_JPEG? "jpg": "pnm");
 
 			save_jpeg(fn, 75, w->image, w->width, w->height);
 			i++;
+		} else {
+			printf("Timeout!\n");
 		}
 
 		if (i > 10) break;
