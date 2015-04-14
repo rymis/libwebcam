@@ -53,6 +53,9 @@ typedef struct webcam {
 	/* Name of the camera. */
 	char *name;
 
+	webcam_format_t *formats;
+	unsigned formats_cnt;
+
 	/* Width and height of the image: */
 	unsigned width, height;
 
@@ -62,7 +65,7 @@ typedef struct webcam {
 	/* img contains uint32_t's in form 0x00rrggbb */
 } webcam_t;
 
-typedef int (*webcam_frame_cb)(void *ctx, webcam_t *cam, void *pixels, size_t size);
+typedef int (*webcam_frame_cb)(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pixels, size_t bpl, size_t size);
 
 /* List all cameras connected */
 int webcam_list(int *ids, unsigned *cnt);

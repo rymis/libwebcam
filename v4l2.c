@@ -149,11 +149,6 @@ webcam_t* webcam_open(int id, unsigned width, unsigned height)
 		return NULL;
 	}
 
-	if (width == 0) {
-		width = 640;
-		height = 480;
-	}
-
 	/* Ok now we can allocate webcam structure and open device: */
 	res = calloc(1, sizeof(webcam_t));
 	if (!res) {
@@ -161,9 +156,13 @@ webcam_t* webcam_open(int id, unsigned width, unsigned height)
 		return NULL;
 	}
 
+	if (!width) {
+		width = 640;
+		height = 480;
+	}
+
 	res->width = width;
 	res->height = height;
-	/* res->image = calloc(width * height, sizeof(uint32_t)); */
 
 	priv = res->priv = calloc(1, sizeof(priv_t));
 	if (!priv) {
@@ -435,6 +434,22 @@ int webcam_get_control(webcam_t *cam, webcam_controls_t id)
 	return (v * 25) / 16384;
 }
 
+static struct fmtv2l {
+	webcam_format_t fmt;
+	uint32_t        v4l_fmt;
+} v4l_formats[] = {
+	{ WEBCAM_RGB32,  V4L2_PIX_FMT_RGB32 },
+	{ WEBCAM_RGB24,  V4L2_PIX_FMT_RGB24 },
+	{ WEBCAM_BGR24,  V4L2_PIX_FMT_BGR24 },
+	{ WEBCAM_RGB555, V4L2_PIX_FMT_RGB555 },
+	{ WEBCAM_RGB565, V4L2_PIX_FMT_RGB565 },
+	{ WEBCAM_RGB332, V4L2_PIX_FMT_RGB332 },
+	{ WEBCAM_YUV422, V4L2_PIX_FMT_YUYV },
+	{ WEBCAM_GRAY, V4L2_PIX_FMT_GREY },
+	{ WEBCAM_JPEG, V4L2_PIX_FMT_JPEG }
+};
+const unsigned v4l_formats_cnt = sizeof(v4l_formats) / sizeof(v4l_formats[0]);
+
 static int init_mmap(webcam_t *cam);
 static int init_read(webcam_t *cam);
 static int init_cam(webcam_t *cam, const char *devname)
@@ -444,10 +459,12 @@ static int init_cam(webcam_t *cam, const char *devname)
         struct v4l2_crop crop;
 	struct v4l2_format fmt;
 	struct v4l2_fmtdesc fmtdesc;
+	webcam_format_t *formats = NULL;
+	unsigned formats_cnt = 0;
         unsigned min;
 	priv_t *priv = cam->priv;
 	int rv;
-	unsigned i;
+	unsigned i, j;
 	char info[512];
 
 	/* Request for capabilities: */
@@ -493,9 +510,14 @@ static int init_cam(webcam_t *cam, const char *devname)
 		}
 	}
 
-	/* Checking all formats: */
+	formats = calloc(16, sizeof(webcam_format_t));
+	if (!formats) {
+		log("Not enought memory");
+		return -1;
+	}
+	formats_cnt = 0;
+
 	for (i = 0;; i++) {
-		char sf[6];
 		fmtdesc.index = i;
 		fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
@@ -504,9 +526,22 @@ static int init_cam(webcam_t *cam, const char *devname)
 			break;
 		}
 
-		memset(sf, 0, 5);
-		memcpy(sf, &fmtdesc.pixelformat, 4);
+		for (j = 0; j < v4l_formats_cnt; j++) {
+			if (fmtdesc.pixelformat == v4l_formats[j].v4l_fmt) {
+				if (formats_cnt >= 16) {
+					void *tmp = realloc(formats, sizeof(webcam_format_t) * (formats_cnt + 1));
+					if (!tmp) {
+						break; /* It is error but 16 formats are always present! */
+					}
 
+					formats = tmp;
+				}
+
+				formats[formats_cnt++] = v4l_formats[j].fmt;
+
+				break;
+			}
+		}
 /* TODO: determine format to use */
 	}
 

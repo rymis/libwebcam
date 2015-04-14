@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 		free(nm);
 	}
 
-	w = webcam_open(cams[0], 0, 0);
+	w = webcam_open(cams[0], 640, 480);
 	if (!w) {
 		fprintf(stderr, "Error: can't open camera!\n");
 		return 1;
