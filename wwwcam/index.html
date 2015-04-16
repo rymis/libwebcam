@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+	<head>
+		<title>WebCamera</title>
+	</head>
+	<body>
+		<img src="/image.jpg" name='webcam'>
+	        <script type="text/javascript">
+var img = document.images['webcam'];
+var seq = 1;
+
+function isimagecompete()
+{
+	if (!img.complete) {
+		return false;
+	}
+
+	if (typeof img.naturalWidth !== "undefined" && img.naturalWidth === 0) {
+		return false;
+	}
+
+	return true;
+}
+
+function update()
+{
+	if (isimagecomplete()) {
+		var rnd = Math.round(Math.random() * 1000000 + 1.0);
+		img.src = "/getimage/img/last.jpg?seq=" + seq + "&rnd=" + rnd;
+		seq++;
+	}
+
+	setTimeout('update()', 50);
+}
+
+setTimeout('update()', 10 * 50);
+	        </script>
+
+	</body>
+</html>
+
