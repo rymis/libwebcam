@@ -7,6 +7,10 @@
 #include <jpeglib.h>
 #include <time.h>
 
+static char main_page_html[] =
+#include "index_html.inc"
+;
+
 /* Simple webcam-based http camera interface */
 
 static int exit_now = 0;
@@ -128,21 +132,7 @@ int main(int argc, char *argv[])
 
 static int main_page_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param)
 {
-	mihl_add(cnx, "<!doctype html>");
-	mihl_add(cnx, "<html><head><title>%s</title></head>", CAM_NAME);
-	mihl_add(cnx, "<body>");
-	mihl_add(cnx, "<image src='image.jpg' name='webcam'>");
-	mihl_add(cnx,
-			"<script type=\"text/javascript\">"
-			"var img = document.images['webcam'];"
-			"var seq = 1;"
-			"function update() {"
-			"var rnd = Math.round(Math.random() * 1000000 + 1.0);"
-			"img.src = \"/jpeg/image.jpg?seq=\" + seq + \"&rnd=\" + rnd; seq++;"
-			"setTimeout('update()', 100); }"
-			"setTimeout('update()', 100);"
-			"</script>");
-	mihl_add(cnx, "</body></html>");
+	mihl_add(cnx, "%s", main_page_html);
 	mihl_send(cnx, NULL, "Content-Type: text/html\r\n");
 	return 0;
 }
