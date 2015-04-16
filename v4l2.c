@@ -49,12 +49,10 @@ typedef struct webcam_private {
 	unsigned char *buf; /* read buffer */
 	size_t img_len;
 	size_t bpl;
-
-	webcam_format_t format;
 } priv_t;
 
 static int init_cam(webcam_t *cam, const char *devname);
-static void process_image(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pixels, size_t bpl, size_t img_len);
+static void process_image(void *ctx, webcam_t *cam, unsigned char *pixels, size_t bpl, size_t img_len);
 
 /* Count all cameras connected */
 int webcam_list(int *ids, unsigned *count)
@@ -357,7 +355,7 @@ int webcam_wait_frame_cb(webcam_t *cam, webcam_frame_cb cb, void *arg, unsigned 
 			return -1;
 		}
 
-		cb(arg, cam, priv->format, priv->buf, priv->bpl, rv);
+		cb(arg, cam, priv->buf, priv->bpl, rv);
 
 		return 1;
 	} else if (priv->io_method == IO_METHOD_MMAP) {
@@ -385,7 +383,7 @@ int webcam_wait_frame_cb(webcam_t *cam, webcam_frame_cb cb, void *arg, unsigned 
 		}
 #endif
 
-		cb(arg, cam, priv->format, priv->buffers[buf.index].start, priv->bpl, priv->buffers[buf.index].len);
+		cb(arg, cam, priv->buffers[buf.index].start, priv->bpl, priv->buffers[buf.index].len);
 
 		REINTR(rv, v4l2_ioctl(priv->fd, VIDIOC_QBUF, &buf));
 
@@ -449,22 +447,6 @@ int webcam_get_control(webcam_t *cam, webcam_controls_t id)
 	return (v * 25) / 16384;
 }
 
-static struct fmtv2l {
-	webcam_format_t fmt;
-	uint32_t        v4l_fmt;
-} v4l_formats[] = {
-	{ WEBCAM_RGB32,  V4L2_PIX_FMT_RGB32 },
-	{ WEBCAM_RGB24,  V4L2_PIX_FMT_RGB24 },
-	{ WEBCAM_BGR24,  V4L2_PIX_FMT_BGR24 },
-	{ WEBCAM_RGB555, V4L2_PIX_FMT_RGB555 },
-	{ WEBCAM_RGB565, V4L2_PIX_FMT_RGB565 },
-	{ WEBCAM_RGB332, V4L2_PIX_FMT_RGB332 },
-	{ WEBCAM_YUV422, V4L2_PIX_FMT_YUYV },
-	{ WEBCAM_GRAY, V4L2_PIX_FMT_GREY },
-	{ WEBCAM_JPEG, V4L2_PIX_FMT_JPEG }
-};
-const unsigned v4l_formats_cnt = sizeof(v4l_formats) / sizeof(v4l_formats[0]);
-
 static int init_mmap(webcam_t *cam);
 static int init_read(webcam_t *cam);
 static int init_cam(webcam_t *cam, const char *devname)
@@ -477,7 +459,7 @@ static int init_cam(webcam_t *cam, const char *devname)
         unsigned min;
 	priv_t *priv = cam->priv;
 	int rv;
-	unsigned i, j;
+	unsigned i;
 	char info[512];
 
 	/* Request for capabilities: */
@@ -523,7 +505,6 @@ static int init_cam(webcam_t *cam, const char *devname)
 		}
 	}
 
-	memset(&fmt, 0, sizeof(fmt));
 	for (i = 0;; i++) {
 		fmtdesc.index = i;
 		fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -532,32 +513,15 @@ static int init_cam(webcam_t *cam, const char *devname)
 		if (rv < 0) {
 			break;
 		}
-
-		if (fmtdesc.pixelformat == V4L2_PIX_FMT_RGB24) {
-			fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
-			priv->format = WEBCAM_RGB24;
-			break;
-		}
-
-		for (j = 0; j < v4l_formats_cnt; j++) {
-			if (!fmt.fmt.pix.pixelformat) {
-				if (fmtdesc.pixelformat == v4l_formats[j].v4l_fmt) {
-					priv->format = v4l_formats[j].fmt;
-					fmt.fmt.pix.pixelformat = fmtdesc.pixelformat;
-					break;
-				}
-			}
-		}
 	}
 
-	if (!fmt.fmt.pix.pixelformat) {
-		fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
-	}
+	memset(&fmt, 0, sizeof(fmt));
 
 	/* Querry for video format: */
 	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	fmt.fmt.pix.width = cam->width;
 	fmt.fmt.pix.height = cam->height;
+	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
 	fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
 
 	REINTR(rv, v4l2_ioctl(priv->fd, VIDIOC_S_FMT, &fmt));
@@ -695,30 +659,19 @@ static int init_read(webcam_t *cam)
 	return 0;
 }
 
-static void process_image(void *ctx, webcam_t *cam, webcam_format_t fmt, void *pixels, size_t bpl, size_t img_len)
+static void process_image(void *ctx, webcam_t *cam, unsigned char *pixels, size_t bpl, size_t img_len)
 {
-	priv_t *priv = cam->priv;
-	size_t tosz = cam->width * cam->height * sizeof(webcam_color_t);
+	size_t y, x;
+	size_t off;
+	size_t c_off;
 
-	if (webcam_convert_image(cam->width, cam->height,
-			priv->format, bpl, pixels, img_len,
-			WEBCAM_RGB32, cam->width * sizeof(webcam_color_t), cam->image, &tosz,
-			NULL, 0)) {
-		log("Converter error");
-	}
-
-{
-	unsigned i, j;
-	unsigned char *P = pixels;
-
-	for (j = 0; j < cam->height; j++) {
-		for (i = 0; i < cam->width; i++) {
-			cam->image[j * cam->width + i] = webcam_color_rgb(
-					P[j * priv->bpl + i],
-					P[j * priv->bpl + i + 1],
-					P[j * priv->bpl + i + 2]);
+	for (y = 0; y < cam->height; y++) {
+		off = bpl * y;
+		c_off = y * cam->width;
+		for (x = 0; x < cam->width; x++) {
+			cam->image[c_off + x] = webcam_color_rgb(pixels[off], pixels[off + 1], pixels[off + 2]);
+			off += 3;
 		}
 	}
-}
 }
 

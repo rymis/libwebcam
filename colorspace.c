@@ -1,6 +1,20 @@
 #include "libwebcam.h"
 #include <string.h>
 
+typedef enum webcam_format {
+	WEBCAM_RGB32,            /* 00000000 rrrrrrrr gggggggg bbbbbbbb as uint32_t */
+	WEBCAM_RGB24,            /*          rrrrrrrr gggggggg bbbbbbbb             */
+	WEBCAM_BGR24,            /*          bbbbbbbb gggggggg rrrrrrrr             */
+	WEBCAM_RGB555,           /*                   0rrrrrgg gggbbbbb             */
+	WEBCAM_RGB565,           /*                   rrrrrggg gggbbbbb             */
+	WEBCAM_RGB332,           /*                            rrrgggbb             */
+	WEBCAM_BGR233,           /*                            bbgggrrr             */
+	WEBCAM_YUV,              /*          yyyyyyyy uuuuuuuu vvvvvvvv             */
+	WEBCAM_YUV422,           /*          Y Cb Y Cr... as bytes                  */
+	WEBCAM_GRAY,             /*                            yyyyyyyy             */
+	WEBCAM_JPEG              /* JPEG encoded data                               */
+} webcam_format_t;
+
 #define DEBUG 1
 
 #ifdef DEBUG
