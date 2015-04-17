@@ -1,0 +1,3 @@
+JPEG compressor found at https://code.google.com/p/jpeg-compressor/.
+
+This compressor have been translated to C. Some functions needs renaming but it is working compressor at all.
