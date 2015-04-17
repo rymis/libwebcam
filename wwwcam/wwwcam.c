@@ -4,7 +4,6 @@
 #include <glovars.h>
 #include <signal.h>
 #include <stdio.h>
-#include <jpeglib.h>
 #include <time.h>
 
 static char main_page_html[] =
@@ -194,6 +193,9 @@ static int current_image_get(mihl_cnx_t *cnx, const char *tag, const char *host,
 }
 
 #if defined(WITH_LIBJPEG) && WITH_LIBJPEG
+
+#include <jpeglib.h>
+
 static int save_jpeg(unsigned char **buf, size_t *len, int quality, unsigned char *data, int width, int height, int bpl)
 {
 	struct jpeg_compress_struct cinfo;
