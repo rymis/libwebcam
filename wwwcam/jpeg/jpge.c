@@ -12,7 +12,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 
 #define JPGE_MAX(a,b) (((a)>(b))?(a):(b))
 #define JPGE_MIN(a,b) (((a)<(b))?(a):(b))
@@ -44,6 +43,7 @@ int jpeg_params_check(const struct jpeg_params *params)
 enum { M_SOF0 = 0xC0, M_DHT = 0xC4, M_SOI = 0xD8, M_EOI = 0xD9, M_SOS =
 	    0xDA, M_DQT = 0xDB, M_APP0 = 0xE0
 };
+
 enum { DC_LUM_CODES = 12, AC_LUM_CODES = 256, DC_CHROMA_CODES =
 	    12, AC_CHROMA_CODES = 256, MAX_HUFF_SYMBOLS =
 	    257, MAX_HUFF_CODESIZE = 32
@@ -72,12 +72,16 @@ static int16 s_std_croma_quant[64] =
 	99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
 	99, 99, 99
 };
+
 static uint8 s_dc_lum_bits[17] =
     { 0, 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 };
+
 static uint8 s_dc_lum_val[DC_LUM_CODES] =
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+
 static uint8 s_ac_lum_bits[17] =
     { 0, 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 0x7d };
+
 static uint8 s_ac_lum_val[AC_LUM_CODES] =
     { 0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06,
 	0x13, 0x51, 0x61, 0x07, 0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xa1, 0x08,
@@ -98,12 +102,16 @@ static uint8 s_ac_lum_val[AC_LUM_CODES] =
 	0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9,
 	0xea, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa
 };
+
 static uint8 s_dc_chroma_bits[17] =
     { 0, 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 };
+
 static uint8 s_dc_chroma_val[DC_CHROMA_CODES] =
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+
 static uint8 s_ac_chroma_bits[17] =
     { 0, 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 0x77 };
+
 static uint8 s_ac_chroma_val[AC_CHROMA_CODES] =
     { 0x00, 0x01, 0x02, 0x03, 0x11, 0x04, 0x05, 0x21, 0x31, 0x06, 0x12, 0x41,
 	0x51, 0x07, 0x61, 0x71, 0x13, 0x22, 0x32, 0x81, 0x08, 0x14, 0x42, 0x91,
@@ -127,8 +135,18 @@ static uint8 s_ac_chroma_val[AC_CHROMA_CODES] =
 
 // Low-level helper functions.
 #define clear_obj(obj) memset(&obj, 0, sizeof(obj))
-const int YR = 19595, YG = 38470, YB = 7471, CB_R = -11059, CB_G =
-    -21709, CB_B = 32768, CR_R = 32768, CR_G = -27439, CR_B = -5329;
+
+const int
+	YR = 19595,
+	YG = 38470,
+	YB = 7471,
+	CB_R = -11059,
+	CB_G = -21709,
+	CB_B = 32768,
+	CR_R = 32768,
+	CR_G = -27439,
+	CR_B = -5329;
+
 static inline uint8 clamp(int i)
 {
 	if ((unsigned)(i) > 255U) {
@@ -138,7 +156,9 @@ static inline uint8 clamp(int i)
 			i = 255;
 	}
 	return (unsigned)i;
-} static void RGB_to_YCC(uint8 * pDst, const uint8 * pSrc, int num_pixels)
+}
+
+static void RGB_to_YCC(uint8 * pDst, const uint8 * pSrc, int num_pixels)
 {
 	for (; num_pixels; pDst += 3, pSrc += 3, num_pixels--) {
 		const int r = pSrc[0], g = pSrc[1], b = pSrc[2];
@@ -151,7 +171,10 @@ static inline uint8 clamp(int i)
 		pDst[2] =
 		    clamp(128 +
 			  ((r * CR_R + g * CR_G + b * CR_B + 32768) >> 16));
-}} static void RGB_to_Y(uint8 * pDst, const uint8 * pSrc, int num_pixels)
+	}
+}
+
+static void RGB_to_Y(uint8 * pDst, const uint8 * pSrc, int num_pixels)
 {
 	for (; num_pixels; pDst++, pSrc += 3, num_pixels--)
 		pDst[0] =
@@ -172,7 +195,10 @@ static void RGBA_to_YCC(uint8 * pDst, const uint8 * pSrc, int num_pixels)
 		pDst[2] =
 		    clamp(128 +
 			  ((r * CR_R + g * CR_G + b * CR_B + 32768) >> 16));
-}} static void RGBA_to_Y(uint8 * pDst, const uint8 * pSrc, int num_pixels)
+	}
+}
+
+static void RGBA_to_Y(uint8 * pDst, const uint8 * pSrc, int num_pixels)
 {
 	for (; num_pixels; pDst++, pSrc += 4, num_pixels--)
 		pDst[0] =
@@ -227,6 +253,7 @@ static void DCT2D(int32 * p)
 		q[6] = DCT_DESCALE(s6, CONST_BITS - ROW_BITS);
 		q[7] = DCT_DESCALE(s7, CONST_BITS - ROW_BITS);
 	}
+
 	for (q = p, c = 7; c >= 0; c--, q++) {
 		int32 s0 = q[0 * 8], s1 = q[1 * 8], s2 = q[2 * 8], s3 =
 		    q[3 * 8], s4 = q[4 * 8], s5 = q[5 * 8], s6 = q[6 * 8], s7 =
@@ -422,11 +449,15 @@ void jpeg_encoder_emit_byte(struct jpeg_encoder *self, uint8 i)
 	self->m_all_stream_writes_succeeded =
 	    self->m_all_stream_writes_succeeded
 	    && self->m_pStream->put_buf(&i, 1);
-} void jpeg_encoder_emit_word(struct jpeg_encoder *self, unsigned i)
+}
+
+void jpeg_encoder_emit_word(struct jpeg_encoder *self, unsigned i)
 {
 	jpeg_encoder_emit_byte(self, (uint8) (i >> 8));
 	jpeg_encoder_emit_byte(self, (uint8) (i & 0xFF));
-} void jpeg_encoder_emit_marker(struct jpeg_encoder *self, int marker)
+}
+
+void jpeg_encoder_emit_marker(struct jpeg_encoder *self, int marker)
 {
 	jpeg_encoder_emit_byte(self, (uint8) (0xFF));
 	jpeg_encoder_emit_byte(self, (uint8) (marker));
@@ -831,7 +862,10 @@ void jpeg_encoder_load_block_16_8(struct jpeg_encoder *self, int x, int c)
 
 		a = b;
 		b = temp;
-}} void jpeg_encoder_load_block_16_8_8(struct jpeg_encoder *self, int x, int c)
+	}
+}
+
+void jpeg_encoder_load_block_16_8_8(struct jpeg_encoder *self, int x, int c)
 {
 	uint8 *pSrc1;
 	jpeg_sample_array_t *pDst = self->m_sample_array;
@@ -1041,9 +1075,7 @@ void jpeg_encoder_process_mcu_row(struct jpeg_encoder *self)
 			jpeg_encoder_load_block_8_8_grey(self, i);
 			jpeg_encoder_code_block(self, 0);
 		}
-	}
-
-	else if ((self->m_comp_h_samp[0] == 1) && (self->m_comp_v_samp[0] == 1)) {
+	} else if ((self->m_comp_h_samp[0] == 1) && (self->m_comp_v_samp[0] == 1)) {
 		for (i = 0; i < self->m_mcus_per_row; i++) {
 			jpeg_encoder_load_block_8_8(self, i, 0, 0);
 			jpeg_encoder_code_block(self, 0);
@@ -1052,9 +1084,7 @@ void jpeg_encoder_process_mcu_row(struct jpeg_encoder *self)
 			jpeg_encoder_load_block_8_8(self, i, 0, 2);
 			jpeg_encoder_code_block(self, 2);
 		}
-	}
-
-	else if ((self->m_comp_h_samp[0] == 2) && (self->m_comp_v_samp[0] == 1)) {
+	} else if ((self->m_comp_h_samp[0] == 2) && (self->m_comp_v_samp[0] == 1)) {
 		for (i = 0; i < self->m_mcus_per_row; i++) {
 			jpeg_encoder_load_block_8_8(self, i * 2 + 0, 0, 0);
 			jpeg_encoder_code_block(self, 0);
@@ -1065,9 +1095,7 @@ void jpeg_encoder_process_mcu_row(struct jpeg_encoder *self)
 			jpeg_encoder_load_block_16_8_8(self, i, 2);
 			jpeg_encoder_code_block(self, 2);
 		}
-	}
-
-	else if ((self->m_comp_h_samp[0] == 2) && (self->m_comp_v_samp[0] == 2)) {
+	} else if ((self->m_comp_h_samp[0] == 2) && (self->m_comp_v_samp[0] == 2)) {
 		for (i = 0; i < self->m_mcus_per_row; i++) {
 			jpeg_encoder_load_block_8_8(self, i * 2 + 0, 0, 0);
 			jpeg_encoder_code_block(self, 0);
@@ -1144,9 +1172,7 @@ void jpeg_encoder_load_mcu(struct jpeg_encoder *self, const void *pSrc)
 
 		else
 			memcpy(pDst, Psrc, self->m_image_x);
-	}
-
-	else {
+	} else {
 		if (self->m_image_bpp == 4)
 			RGBA_to_YCC(pDst, Psrc, self->m_image_x);
 
@@ -1158,12 +1184,12 @@ void jpeg_encoder_load_mcu(struct jpeg_encoder *self, const void *pSrc)
 	}
 
 	// Possibly duplicate pixels at end of scanline if not a multiple of 8 or 16
-	if (self->m_num_components == 1)
+	if (self->m_num_components == 1) {
 		memset(self->m_mcu_lines[self->m_mcu_y_ofs] +
 		       self->m_image_bpl_xlt, pDst[self->m_image_bpl_xlt - 1],
 		       self->m_image_x_mcu - self->m_image_x);
 
-	else {
+	} else {
 		const uint8 y = pDst[self->m_image_bpl_xlt - 3 + 0], cb =
 		    pDst[self->m_image_bpl_xlt - 3 + 1], cr =
 		    pDst[self->m_image_bpl_xlt - 3 + 2];
@@ -1177,6 +1203,7 @@ void jpeg_encoder_load_mcu(struct jpeg_encoder *self, const void *pSrc)
 			*q++ = cr;
 		}
 	}
+
 	if (++self->m_mcu_y_ofs == self->m_mcu_y) {
 		jpeg_encoder_process_mcu_row(self);
 		self->m_mcu_y_ofs = 0;
@@ -1190,17 +1217,49 @@ void jpeg_encoder_clear(struct jpeg_encoder *self)
 	self->m_all_stream_writes_succeeded = TRUE;
 }
 
-#if CONSTRUCTOR
-jpeg_encoder_jpeg_encoder(struct jpeg_encoder *self)
+struct jpeg_params *jpeg_params_new(void)
 {
-	clear();
+	struct jpeg_params *res = jpge_malloc(sizeof(struct jpeg_params));
+
+	if (!res) {
+		return NULL;
+	}
+
+	memset(res, 0, sizeof(struct jpeg_params));
+
+	res->m_quality = 85;
+	res->m_subsampling = H2V2;
+	res->m_no_chroma_discrim_flag = FALSE;
+	res->m_two_pass_flag = FALSE;
+
+	return res;
 }
 
-jpeg_encoder_ ~ jpeg_encoder(struct jpeg_encoder *self)
+void jpeg_params_free(struct jpeg_params *self)
 {
-	deinit();
+	jpge_free(self);
 }
-#endif
+
+struct jpeg_encoder *jpeg_encoder_new()
+{
+	struct jpeg_encoder *self = jpge_malloc(sizeof(struct jpeg_encoder));
+	if (!self) {
+		return NULL;
+	}
+
+	memset(self, 0, sizeof(struct jpeg_encoder));
+
+	jpeg_encoder_clear(self);
+
+	return self;
+}
+
+void jpeg_encoder_free(struct jpeg_encoder *self)
+{
+	jpeg_encoder_deinit(self);
+
+	jpge_free(self);
+}
 
 int jpeg_encoder_encoder_init(struct jpeg_encoder *self,
 			      struct jpeg_output_stream *pStream, int width,
@@ -1208,12 +1267,15 @@ int jpeg_encoder_encoder_init(struct jpeg_encoder *self,
 			      const struct jpeg_params *comp_params)
 {
 	jpeg_encoder_deinit(self);
+
 	if (((!pStream) || (width < 1) || (height < 1))
 	    || ((src_channels != 1) && (src_channels != 3)
 		&& (src_channels != 4)) || (!jpeg_params_check(comp_params)))
 		return FALSE;
+
 	self->m_pStream = pStream;
 	memcpy(&self->m_params, comp_params, sizeof(struct jpeg_params));
+
 	return jpeg_encoder_jpg_open(self, width, height, src_channels);
 }
 
@@ -1221,7 +1283,9 @@ void jpeg_encoder_deinit(struct jpeg_encoder *self)
 {
 	jpge_free(self->m_mcu_lines[0]);
 	jpeg_encoder_clear(self);
-} int jpeg_encoder_process_scanline(struct jpeg_encoder *self,
+}
+
+int jpeg_encoder_process_scanline(struct jpeg_encoder *self,
 				    const void *pScanline)
 {
 	if ((self->m_pass_num < 1) || (self->m_pass_num > 2))
@@ -1236,6 +1300,7 @@ void jpeg_encoder_deinit(struct jpeg_encoder *self)
 			jpeg_encoder_load_mcu(self, pScanline);
 		}
 	}
+
 	return self->m_all_stream_writes_succeeded;
 }
 

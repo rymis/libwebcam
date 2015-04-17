@@ -20,20 +20,9 @@ enum subsampling { Y_ONLY = 0, H1V1 = 1, H2V1 = 2, H2V2 = 3 };
 // JPEG compression parameters structure.
 struct jpeg_params;
 struct jpeg_params *jpeg_params_new(void);
+void jpeg_params_free(struct jpeg_params *self);
 int jpeg_params_check(const struct jpeg_params *params);
 struct jpeg_params {
-
-/* inline params() : m_quality(85), m_subsampling(H2V2), m_no_chroma_discrim_flag(false), m_two_pass_flag(false) { } */
-
-/*
-   inline int check() const
-   {
-   if ((m_quality < 1) || (m_quality > 100)) return false;
-   if ((unsigned)m_subsampling > (unsigned)H2V2) return false;
-   return true;
-   }
-*/
-
 	// Quality: 1-100, higher is better. Typical values are around 50-95.
 	int m_quality;
 
