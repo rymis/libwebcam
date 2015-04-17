@@ -34,7 +34,7 @@ int jpeg_params_check(const struct jpeg_params *params)
 {
 	if ((params->m_quality < 1) || (params->m_quality > 100))
 		return FALSE;
-	if ((unsigned)params->m_subsampling > (unsigned)H2V2)
+	if ((unsigned)params->m_subsampling > (unsigned)JPGE_H2V2)
 		return FALSE;
 	return TRUE;
 }
@@ -688,7 +688,7 @@ int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res, int p_y_res,
 
 	self->m_num_components = 3;
 	switch (self->m_params.m_subsampling) {
-	case Y_ONLY:
+	case JPGE_Y_ONLY:
 		{
 			self->m_num_components = 1;
 			self->m_comp_h_samp[0] = 1;
@@ -697,7 +697,7 @@ int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res, int p_y_res,
 			self->m_mcu_y = 8;
 			break;
 		}
-	case H1V1:
+	case JPGE_H1V1:
 		{
 			self->m_comp_h_samp[0] = 1;
 			self->m_comp_v_samp[0] = 1;
@@ -709,7 +709,7 @@ int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res, int p_y_res,
 			self->m_mcu_y = 8;
 			break;
 		}
-	case H2V1:
+	case JPGE_H2V1:
 		{
 			self->m_comp_h_samp[0] = 2;
 			self->m_comp_v_samp[0] = 1;
@@ -721,7 +721,7 @@ int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res, int p_y_res,
 			self->m_mcu_y = 8;
 			break;
 		}
-	case H2V2:
+	case JPGE_H2V2:
 		{
 			self->m_comp_h_samp[0] = 2;
 			self->m_comp_v_samp[0] = 2;
@@ -1217,27 +1217,14 @@ void jpeg_encoder_clear(struct jpeg_encoder *self)
 	self->m_all_stream_writes_succeeded = TRUE;
 }
 
-struct jpeg_params *jpeg_params_new(void)
+void jpeg_params_init(struct jpeg_params *self)
 {
-	struct jpeg_params *res = jpge_malloc(sizeof(struct jpeg_params));
+	memset(self, 0, sizeof(struct jpeg_params));
 
-	if (!res) {
-		return NULL;
-	}
-
-	memset(res, 0, sizeof(struct jpeg_params));
-
-	res->m_quality = 85;
-	res->m_subsampling = H2V2;
-	res->m_no_chroma_discrim_flag = FALSE;
-	res->m_two_pass_flag = FALSE;
-
-	return res;
-}
-
-void jpeg_params_free(struct jpeg_params *self)
-{
-	jpge_free(self);
+	self->m_quality = 85;
+	self->m_subsampling = JPGE_H2V2;
+	self->m_no_chroma_discrim_flag = FALSE;
+	self->m_two_pass_flag = FALSE;
 }
 
 struct jpeg_encoder *jpeg_encoder_new()

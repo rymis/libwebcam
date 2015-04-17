@@ -15,12 +15,11 @@ typedef unsigned short uint16;
 typedef unsigned int uint32;
 
 // JPEG chroma subsampling factors. Y_ONLY (grayscale images) and H2V2 (color images) are the most common.
-enum subsampling { Y_ONLY = 0, H1V1 = 1, H2V1 = 2, H2V2 = 3 };
+enum subsampling { JPGE_Y_ONLY = 0, JPGE_H1V1 = 1, JPGE_H2V1 = 2, JPGE_H2V2 = 3 };
 
 // JPEG compression parameters structure.
 struct jpeg_params;
-struct jpeg_params *jpeg_params_new(void);
-void jpeg_params_free(struct jpeg_params *self);
+void jpeg_params_init(struct jpeg_params *self);
 int jpeg_params_check(const struct jpeg_params *params);
 struct jpeg_params {
 	// Quality: 1-100, higher is better. Typical values are around 50-95.
