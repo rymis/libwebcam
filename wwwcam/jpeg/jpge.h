@@ -6,7 +6,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* } */
+#endif				/* } */
 
 typedef unsigned char uint8;
 typedef signed short int16;
@@ -86,9 +86,9 @@ void jpeg_encoder_free(struct jpeg_encoder *enc);
 // channels - May be 1, or 3. 1 indicates grayscale, 3 indicates RGB source data.
 // Returns false on out of memory or if a stream write fails.
 int jpeg_encoder_encoder_init(struct jpeg_encoder *self,
-		      struct jpeg_output_stream *pStream, int width,
-		      int height, int src_channels,
-		      const struct jpeg_params *comp_params);
+			      struct jpeg_output_stream *pStream,
+			      int width, int height, int src_channels,
+			      const struct jpeg_params *comp_params);
 void jpeg_encoder_deinit(struct jpeg_encoder *self);
 
 // Call this method with each source scanline.
@@ -130,7 +130,7 @@ struct jpeg_encoder {
 	int m_all_stream_writes_succeeded;
 };
 void jpeg_encoder_optimize_huffman_table(struct jpeg_encoder *self,
-				 int table_num, int table_len);
+					 int table_num, int table_len);
 void jpeg_encoder_emit_byte(struct jpeg_encoder *self, uint8 i);
 void jpeg_encoder_emit_word(struct jpeg_encoder *self, unsigned i);
 void jpeg_encoder_emit_marker(struct jpeg_encoder *self, int marker);
@@ -138,33 +138,36 @@ void jpeg_encoder_emit_jfif_app0(struct jpeg_encoder *self);
 void jpeg_encoder_emit_dqt(struct jpeg_encoder *self);
 void jpeg_encoder_emit_sof(struct jpeg_encoder *self);
 void jpeg_encoder_emit_dht(struct jpeg_encoder *self, uint8 * bits,
-		   uint8 * val, int index, int ac_flag);
+			   uint8 * val, int index, int ac_flag);
 void jpeg_encoder_emit_dhts(struct jpeg_encoder *self);
 void jpeg_encoder_emit_sos(struct jpeg_encoder *self);
 void jpeg_encoder_emit_markers(struct jpeg_encoder *self);
 void jpeg_encoder_compute_huffman_table(struct jpeg_encoder *self,
-				unsigned *codes, uint8 * code_sizes,
-				uint8 * bits, uint8 * val);
-void jpeg_encoder_compute_quant_table(struct jpeg_encoder *self, int32 * dst,
-			      int16 * src);
-void jpeg_encoder_adjust_quant_table(struct jpeg_encoder *self, int32 * dst,
-			     int32 * src);
+					unsigned *codes,
+					uint8 * code_sizes,
+					uint8 * bits, uint8 * val);
+void jpeg_encoder_compute_quant_table(struct jpeg_encoder *self,
+				      int32 * dst, int16 * src);
+void jpeg_encoder_adjust_quant_table(struct jpeg_encoder *self,
+				     int32 * dst, int32 * src);
 void jpeg_encoder_first_pass_init(struct jpeg_encoder *self);
 int jpeg_encoder_second_pass_init(struct jpeg_encoder *self);
-int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res, int p_y_res,
-		  int src_channels);
+int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res,
+			  int p_y_res, int src_channels);
 void jpeg_encoder_load_block_8_8_grey(struct jpeg_encoder *self, int x);
-void jpeg_encoder_load_block_8_8(struct jpeg_encoder *self, int x, int y, int c);
+void jpeg_encoder_load_block_8_8(struct jpeg_encoder *self, int x,
+				 int y, int c);
 void jpeg_encoder_load_block_16_8(struct jpeg_encoder *self, int x, int c);
 void jpeg_encoder_load_block_16_8_8(struct jpeg_encoder *self, int x, int c);
 void jpeg_encoder_load_quantized_coefficients(struct jpeg_encoder *self,
-				      int component_num);
+					      int component_num);
 void jpeg_encoder_flush_output_buffer(struct jpeg_encoder *self);
-void jpeg_encoder_put_bits(struct jpeg_encoder *self, unsigned bits, unsigned len);
+void jpeg_encoder_put_bits(struct jpeg_encoder *self, unsigned bits,
+			   unsigned len);
 void jpeg_encoder_code_coefficients_pass_one(struct jpeg_encoder *self,
-				     int component_num);
+					     int component_num);
 void jpeg_encoder_code_coefficients_pass_two(struct jpeg_encoder *self,
-				     int component_num);
+					     int component_num);
 void jpeg_encoder_code_block(struct jpeg_encoder *self, int component_num);
 void jpeg_encoder_process_mcu_row(struct jpeg_encoder *self);
 int jpeg_encoder_terminate_pass_one(struct jpeg_encoder *self);

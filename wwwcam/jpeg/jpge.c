@@ -33,11 +33,12 @@ static inline void jpge_free(void *p)
 
 int jpeg_params_check(const struct jpeg_params *params)
 {
-	if ((params->m_quality < 1) || (params->m_quality > 100)) return FALSE;
-	if ((unsigned)params->m_subsampling > (unsigned)H2V2) return FALSE;
+	if ((params->m_quality < 1) || (params->m_quality > 100))
+		return FALSE;
+	if ((unsigned)params->m_subsampling > (unsigned)H2V2)
+		return FALSE;
 	return TRUE;
 }
-
 
 // Various JPEG enums and tables.
 enum { M_SOF0 = 0xC0, M_DHT = 0xC4, M_SOI = 0xD8, M_EOI = 0xD9, M_SOS =
@@ -51,25 +52,25 @@ enum { DC_LUM_CODES = 12, AC_LUM_CODES = 256, DC_CHROMA_CODES =
 static uint8 s_zag[64] =
     { 0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33,
 	40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50,
-	    43, 36, 29, 22, 15,
+	43, 36, 29, 22, 15,
 	23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47,
-	    55, 62, 63
+	55, 62, 63
 };
 
 static int16 s_std_lum_quant[64] =
     { 16, 11, 12, 14, 12, 10, 16, 14, 13, 14, 18, 17, 16, 19, 24, 40, 26, 24,
 	22, 22, 24, 49, 35, 37, 29, 40, 58, 51, 61, 60, 57, 51, 56, 55, 64, 72,
-	    92, 78, 64, 68, 87, 69, 55,
+	92, 78, 64, 68, 87, 69, 55,
 	56, 80, 109, 81, 87, 95, 98, 103, 104, 103, 62, 77, 113, 121, 112, 100,
-	    120, 92, 101, 103, 99
+	120, 92, 101, 103, 99
 };
 
 static int16 s_std_croma_quant[64] =
     { 17, 18, 18, 24, 21, 24, 47, 26, 26, 47, 99, 66, 56, 66, 99, 99, 99, 99,
 	99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
-	    99, 99, 99, 99, 99, 99, 99,
+	99, 99, 99, 99, 99, 99, 99,
 	99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
-	    99, 99, 99
+	99, 99, 99
 };
 static uint8 s_dc_lum_bits[17] =
     { 0, 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 };
@@ -80,21 +81,21 @@ static uint8 s_ac_lum_bits[17] =
 static uint8 s_ac_lum_val[AC_LUM_CODES] =
     { 0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06,
 	0x13, 0x51, 0x61, 0x07, 0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xa1, 0x08,
-	    0x23, 0x42, 0xb1, 0xc1, 0x15, 0x52,
+	0x23, 0x42, 0xb1, 0xc1, 0x15, 0x52,
 	0xd1, 0xf0, 0x24, 0x33, 0x62, 0x72, 0x82, 0x09, 0x0a, 0x16, 0x17, 0x18,
-	    0x19, 0x1a, 0x25, 0x26, 0x27,
+	0x19, 0x1a, 0x25, 0x26, 0x27,
 	0x28, 0x29, 0x2a, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x43, 0x44,
-	    0x45, 0x46, 0x47, 0x48, 0x49,
+	0x45, 0x46, 0x47, 0x48, 0x49,
 	0x4a, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x63, 0x64, 0x65,
-	    0x66, 0x67, 0x68, 0x69, 0x6a,
+	0x66, 0x67, 0x68, 0x69, 0x6a,
 	0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x83, 0x84, 0x85, 0x86,
-	    0x87, 0x88, 0x89, 0x8a, 0x92,
+	0x87, 0x88, 0x89, 0x8a, 0x92,
 	0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0xa2, 0xa3, 0xa4, 0xa5,
-	    0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xb2,
+	0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xb2,
 	0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xc2, 0xc3, 0xc4, 0xc5,
-	    0xc6, 0xc7, 0xc8, 0xc9, 0xca,
+	0xc6, 0xc7, 0xc8, 0xc9, 0xca,
 	0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xe1, 0xe2, 0xe3,
-	    0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9,
+	0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9,
 	0xea, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa
 };
 static uint8 s_dc_chroma_bits[17] =
@@ -106,21 +107,21 @@ static uint8 s_ac_chroma_bits[17] =
 static uint8 s_ac_chroma_val[AC_CHROMA_CODES] =
     { 0x00, 0x01, 0x02, 0x03, 0x11, 0x04, 0x05, 0x21, 0x31, 0x06, 0x12, 0x41,
 	0x51, 0x07, 0x61, 0x71, 0x13, 0x22, 0x32, 0x81, 0x08, 0x14, 0x42, 0x91,
-	    0xa1, 0xb1, 0xc1, 0x09, 0x23, 0x33, 0x52,
+	0xa1, 0xb1, 0xc1, 0x09, 0x23, 0x33, 0x52,
 	0xf0, 0x15, 0x62, 0x72, 0xd1, 0x0a, 0x16, 0x24, 0x34, 0xe1, 0x25, 0xf1,
-	    0x17, 0x18, 0x19, 0x1a, 0x26, 0x27,
+	0x17, 0x18, 0x19, 0x1a, 0x26, 0x27,
 	0x28, 0x29, 0x2a, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x43, 0x44, 0x45,
-	    0x46, 0x47, 0x48, 0x49, 0x4a, 0x53,
+	0x46, 0x47, 0x48, 0x49, 0x4a, 0x53,
 	0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x63, 0x64, 0x65, 0x66, 0x67,
-	    0x68, 0x69, 0x6a, 0x73, 0x74, 0x75, 0x76,
+	0x68, 0x69, 0x6a, 0x73, 0x74, 0x75, 0x76,
 	0x77, 0x78, 0x79, 0x7a, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89,
-	    0x8a, 0x92, 0x93, 0x94, 0x95, 0x96,
+	0x8a, 0x92, 0x93, 0x94, 0x95, 0x96,
 	0x97, 0x98, 0x99, 0x9a, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9,
-	    0xaa, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7,
+	0xaa, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7,
 	0xb8, 0xb9, 0xba, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca,
-	    0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7,
+	0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7,
 	0xd8, 0xd9, 0xda, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea,
-	    0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,
+	0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,
 	0xf9, 0xfa
 };
 
@@ -278,7 +279,8 @@ static inline struct sym_freq *radix_sort_syms(unsigned num_syms,
 		for (i = 0; i < 256; i++) {
 			offsets[i] = cur_ofs;
 			cur_ofs += pHist[i];
-		} for (i = 0; i < num_syms; i++)
+		}
+		for (i = 0; i < num_syms; i++)
 			pNew_syms[offsets
 				  [(pCur_syms[i].m_key >> pass_shift) & 0xFF]++]
 			    = pCur_syms[i];
@@ -364,7 +366,8 @@ static void huffman_enforce_max_code_size(int *pNum_codes, int code_list_len,
 }
 
 // Generates an optimized offman table.
-void jpeg_encoder_optimize_huffman_table(struct jpeg_encoder *self, int table_num, int table_len)
+void jpeg_encoder_optimize_huffman_table(struct jpeg_encoder *self,
+					 int table_num, int table_len)
 {
 	struct sym_freq syms0[MAX_HUFF_SYMBOLS], syms1[MAX_HUFF_SYMBOLS];
 	int i;
@@ -416,16 +419,17 @@ void jpeg_encoder_optimize_huffman_table(struct jpeg_encoder *self, int table_nu
 // JPEG marker generation.
 void jpeg_encoder_emit_byte(struct jpeg_encoder *self, uint8 i)
 {
-	self->m_all_stream_writes_succeeded = self->m_all_stream_writes_succeeded
+	self->m_all_stream_writes_succeeded =
+	    self->m_all_stream_writes_succeeded
 	    && self->m_pStream->put_buf(&i, 1);
 } void jpeg_encoder_emit_word(struct jpeg_encoder *self, unsigned i)
 {
-	jpeg_encoder_emit_byte(self, (uint8)(i >> 8));
-	jpeg_encoder_emit_byte(self, (uint8)(i & 0xFF));
+	jpeg_encoder_emit_byte(self, (uint8) (i >> 8));
+	jpeg_encoder_emit_byte(self, (uint8) (i & 0xFF));
 } void jpeg_encoder_emit_marker(struct jpeg_encoder *self, int marker)
 {
-	jpeg_encoder_emit_byte(self, (uint8)(0xFF));
-	jpeg_encoder_emit_byte(self, (uint8)(marker));
+	jpeg_encoder_emit_byte(self, (uint8) (0xFF));
+	jpeg_encoder_emit_byte(self, (uint8) (marker));
 }
 
 // Emit JFIF marker
@@ -438,12 +442,12 @@ void jpeg_encoder_emit_jfif_app0(struct jpeg_encoder *self)
 	jpeg_encoder_emit_byte(self, 0x49);
 	jpeg_encoder_emit_byte(self, 0x46);	/* Identifier: ASCII "JFIF" */
 	jpeg_encoder_emit_byte(self, 0);
-	jpeg_encoder_emit_byte(self, 1);		/* Major version */
-	jpeg_encoder_emit_byte(self, 1);		/* Minor version */
-	jpeg_encoder_emit_byte(self, 0);		/* Density unit */
+	jpeg_encoder_emit_byte(self, 1);	/* Major version */
+	jpeg_encoder_emit_byte(self, 1);	/* Minor version */
+	jpeg_encoder_emit_byte(self, 0);	/* Density unit */
 	jpeg_encoder_emit_word(self, 1);
 	jpeg_encoder_emit_word(self, 1);
-	jpeg_encoder_emit_byte(self, 0);		/* No thumbnail image */
+	jpeg_encoder_emit_byte(self, 0);	/* No thumbnail image */
 	jpeg_encoder_emit_byte(self, 0);
 }
 
@@ -457,16 +461,21 @@ void jpeg_encoder_emit_dqt(struct jpeg_encoder *self)
 		jpeg_encoder_emit_word(self, 64 + 1 + 2);
 		jpeg_encoder_emit_byte(self, CAST(uint8) (i));
 		for (j = 0; j < 64; j++)
-			jpeg_encoder_emit_byte(self, CAST(uint8) (self->m_quantization_tables[i][j]));
-}}
+			jpeg_encoder_emit_byte(self,
+					       CAST(uint8) (self->
+							    m_quantization_tables
+							    [i][j]));
+	}
+}
 
 // Emit start of frame marker
 void jpeg_encoder_emit_sof(struct jpeg_encoder *self)
 {
 	int i;
+
 	jpeg_encoder_emit_marker(self, M_SOF0);	/* baseline */
 	jpeg_encoder_emit_word(self, 3 * self->m_num_components + 2 + 5 + 1);
-	jpeg_encoder_emit_byte(self, 8);		/* precision */
+	jpeg_encoder_emit_byte(self, 8);	/* precision */
 	jpeg_encoder_emit_word(self, self->m_image_y);
 	jpeg_encoder_emit_word(self, self->m_image_x);
 	jpeg_encoder_emit_byte(self, self->m_num_components);
@@ -474,10 +483,12 @@ void jpeg_encoder_emit_sof(struct jpeg_encoder *self)
 		jpeg_encoder_emit_byte(self, CAST(uint8) (i + 1));	/* component ID     */
 		jpeg_encoder_emit_byte(self, (self->m_comp_h_samp[i] << 4) + self->m_comp_v_samp[i]);	/* h and v sampling */
 		jpeg_encoder_emit_byte(self, i > 0);	/* quant. table num */
-}}
+	}
+}
 
 // Emit Huffman table.
-void jpeg_encoder_emit_dht(struct jpeg_encoder *self, uint8 * bits, uint8 * val, int index, int ac_flag)
+void jpeg_encoder_emit_dht(struct jpeg_encoder *self, uint8 * bits, uint8 * val,
+			   int index, int ac_flag)
 {
 	int i;
 	int length = 0;
@@ -497,11 +508,15 @@ void jpeg_encoder_emit_dht(struct jpeg_encoder *self, uint8 * bits, uint8 * val,
 // Emit all Huffman tables.
 void jpeg_encoder_emit_dhts(struct jpeg_encoder *self)
 {
-	jpeg_encoder_emit_dht(self, self->m_huff_bits[0 + 0], self->m_huff_val[0 + 0], 0, FALSE);
-	jpeg_encoder_emit_dht(self, self->m_huff_bits[2 + 0], self->m_huff_val[2 + 0], 0, TRUE);
+	jpeg_encoder_emit_dht(self, self->m_huff_bits[0 + 0],
+			      self->m_huff_val[0 + 0], 0, FALSE);
+	jpeg_encoder_emit_dht(self, self->m_huff_bits[2 + 0],
+			      self->m_huff_val[2 + 0], 0, TRUE);
 	if (self->m_num_components == 3) {
-		jpeg_encoder_emit_dht(self, self->m_huff_bits[0 + 1], self->m_huff_val[0 + 1], 1, FALSE);
-		jpeg_encoder_emit_dht(self, self->m_huff_bits[2 + 1], self->m_huff_val[2 + 1], 1, TRUE);
+		jpeg_encoder_emit_dht(self, self->m_huff_bits[0 + 1],
+				      self->m_huff_val[0 + 1], 1, FALSE);
+		jpeg_encoder_emit_dht(self, self->m_huff_bits[2 + 1],
+				      self->m_huff_val[2 + 1], 1, TRUE);
 	}
 }
 
@@ -509,6 +524,7 @@ void jpeg_encoder_emit_dhts(struct jpeg_encoder *self)
 void jpeg_encoder_emit_sos(struct jpeg_encoder *self)
 {
 	int i;
+
 	jpeg_encoder_emit_marker(self, M_SOS);
 	jpeg_encoder_emit_word(self, 2 * self->m_num_components + 2 + 1 + 3);
 	jpeg_encoder_emit_byte(self, self->m_num_components);
@@ -520,7 +536,7 @@ void jpeg_encoder_emit_sos(struct jpeg_encoder *self)
 		else
 			jpeg_encoder_emit_byte(self, (1 << 4) + 1);
 	}
-	jpeg_encoder_emit_byte(self, 0);		/* spectral selection */
+	jpeg_encoder_emit_byte(self, 0);	/* spectral selection */
 	jpeg_encoder_emit_byte(self, 63);
 	jpeg_encoder_emit_byte(self, 0);
 }
@@ -537,8 +553,9 @@ void jpeg_encoder_emit_markers(struct jpeg_encoder *self)
 }
 
 // Compute the actual canonical Huffman codes/code sizes given the JPEG huff bits and val arrays.
-void jpeg_encoder_compute_huffman_table(struct jpeg_encoder *self, unsigned *codes, uint8 * code_sizes,
-					 uint8 * bits, uint8 * val)
+void jpeg_encoder_compute_huffman_table(struct jpeg_encoder *self,
+					unsigned *codes, uint8 * code_sizes,
+					uint8 * bits, uint8 * val)
 {
 	int i, l, last_p, si;
 
@@ -570,7 +587,8 @@ void jpeg_encoder_compute_huffman_table(struct jpeg_encoder *self, unsigned *cod
 }
 
 // Quantization table generation.
-void jpeg_encoder_compute_quant_table(struct jpeg_encoder *self, int32 * pDst, int16 * pSrc)
+void jpeg_encoder_compute_quant_table(struct jpeg_encoder *self, int32 * pDst,
+				      int16 * pSrc)
 {
 	int32 q;
 	int i;
@@ -585,7 +603,8 @@ void jpeg_encoder_compute_quant_table(struct jpeg_encoder *self, int32 * pDst, i
 
 		j = (j * q + 50L) / 100L;
 		*pDst++ = JPGE_MIN(JPGE_MAX(j, 1), 255);
-}}
+	}
+}
 
 // Higher-level methods.
 void jpeg_encoder_first_pass_init(struct jpeg_encoder *self)
@@ -600,18 +619,30 @@ void jpeg_encoder_first_pass_init(struct jpeg_encoder *self)
 int jpeg_encoder_second_pass_init(struct jpeg_encoder *self)
 {
 	jpeg_encoder_compute_huffman_table(self, &self->m_huff_codes[0 + 0][0],
-			      &self->m_huff_code_sizes[0 + 0][0], self->m_huff_bits[0 + 0],
-			      self->m_huff_val[0 + 0]);
+					   &self->m_huff_code_sizes[0 + 0][0],
+					   self->m_huff_bits[0 + 0],
+					   self->m_huff_val[0 + 0]);
 	jpeg_encoder_compute_huffman_table(self, &self->m_huff_codes[2 + 0][0],
-			      &self->m_huff_code_sizes[2 + 0][0], self->m_huff_bits[2 + 0],
-			      self->m_huff_val[2 + 0]);
+					   &self->m_huff_code_sizes[2 + 0][0],
+					   self->m_huff_bits[2 + 0],
+					   self->m_huff_val[2 + 0]);
 	if (self->m_num_components > 1) {
-		jpeg_encoder_compute_huffman_table(self, &self->m_huff_codes[0 + 1][0],
-				      &self->m_huff_code_sizes[0 + 1][0],
-				      self->m_huff_bits[0 + 1], self->m_huff_val[0 + 1]);
-		jpeg_encoder_compute_huffman_table(self, &self->m_huff_codes[2 + 1][0],
-				      &self->m_huff_code_sizes[2 + 1][0],
-				      self->m_huff_bits[2 + 1], self->m_huff_val[2 + 1]);
+		jpeg_encoder_compute_huffman_table(self,
+						   &self->m_huff_codes[0 +
+								       1][0],
+						   &self->m_huff_code_sizes[0 +
+									    1]
+						   [0],
+						   self->m_huff_bits[0 + 1],
+						   self->m_huff_val[0 + 1]);
+		jpeg_encoder_compute_huffman_table(self,
+						   &self->m_huff_codes[2 +
+								       1][0],
+						   &self->m_huff_code_sizes[2 +
+									    1]
+						   [0],
+						   self->m_huff_bits[2 + 1],
+						   self->m_huff_val[2 + 1]);
 	}
 	jpeg_encoder_first_pass_init(self);
 	jpeg_encoder_emit_markers(self);
@@ -619,7 +650,8 @@ int jpeg_encoder_second_pass_init(struct jpeg_encoder *self)
 	return TRUE;
 }
 
-int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res, int p_y_res, int src_channels)
+int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res, int p_y_res,
+			  int src_channels)
 {
 	int i;
 
@@ -674,20 +706,26 @@ int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res, int p_y_res, i
 	self->m_image_y = p_y_res;
 	self->m_image_bpp = src_channels;
 	self->m_image_bpl = self->m_image_x * src_channels;
-	self->m_image_x_mcu = (self->m_image_x + self->m_mcu_x - 1) & (~(self->m_mcu_x - 1));
-	self->m_image_y_mcu = (self->m_image_y + self->m_mcu_y - 1) & (~(self->m_mcu_y - 1));
+	self->m_image_x_mcu =
+	    (self->m_image_x + self->m_mcu_x - 1) & (~(self->m_mcu_x - 1));
+	self->m_image_y_mcu =
+	    (self->m_image_y + self->m_mcu_y - 1) & (~(self->m_mcu_y - 1));
 	self->m_image_bpl_xlt = self->m_image_x * self->m_num_components;
 	self->m_image_bpl_mcu = self->m_image_x_mcu * self->m_num_components;
 	self->m_mcus_per_row = self->m_image_x_mcu / self->m_mcu_x;
 	if ((self->m_mcu_lines[0] =
-	     CAST(uint8 *) (jpge_malloc(self->m_image_bpl_mcu * self->m_mcu_y))) == NULL)
+	     CAST(uint8 *) (jpge_malloc(self->m_image_bpl_mcu * self->m_mcu_y)))
+	    == NULL)
 		return FALSE;
 	for (i = 1; i < self->m_mcu_y; i++)
-		self->m_mcu_lines[i] = self->m_mcu_lines[i - 1] + self->m_image_bpl_mcu;
-	jpeg_encoder_compute_quant_table(self, self->m_quantization_tables[0], s_std_lum_quant);
+		self->m_mcu_lines[i] =
+		    self->m_mcu_lines[i - 1] + self->m_image_bpl_mcu;
+	jpeg_encoder_compute_quant_table(self, self->m_quantization_tables[0],
+					 s_std_lum_quant);
 	jpeg_encoder_compute_quant_table(self, self->m_quantization_tables[1],
-			    self->m_params.m_no_chroma_discrim_flag ? s_std_lum_quant
-			    : s_std_croma_quant);
+					 self->m_params.
+					 m_no_chroma_discrim_flag ?
+					 s_std_lum_quant : s_std_croma_quant);
 	self->m_out_buf_left = JPGE_OUT_BUF_SIZE;
 	self->m_pOut_buf = self->m_out_buf;
 	if (self->m_params.m_two_pass_flag) {
@@ -701,9 +739,11 @@ int jpeg_encoder_jpg_open(struct jpeg_encoder *self, int p_x_res, int p_y_res, i
 		memcpy(self->m_huff_bits[2 + 0], s_ac_lum_bits, 17);
 		memcpy(self->m_huff_val[2 + 0], s_ac_lum_val, AC_LUM_CODES);
 		memcpy(self->m_huff_bits[0 + 1], s_dc_chroma_bits, 17);
-		memcpy(self->m_huff_val[0 + 1], s_dc_chroma_val, DC_CHROMA_CODES);
+		memcpy(self->m_huff_val[0 + 1], s_dc_chroma_val,
+		       DC_CHROMA_CODES);
 		memcpy(self->m_huff_bits[2 + 1], s_ac_chroma_bits, 17);
-		memcpy(self->m_huff_val[2 + 1], s_ac_chroma_val, AC_CHROMA_CODES);
+		memcpy(self->m_huff_val[2 + 1], s_ac_chroma_val,
+		       AC_CHROMA_CODES);
 		if (!jpeg_encoder_second_pass_init(self))
 			return FALSE;	// in effect, skip over the first pass
 	}
@@ -727,7 +767,10 @@ void jpeg_encoder_load_block_8_8_grey(struct jpeg_encoder *self, int x)
 		pDst[5] = pSrc[5] - 128;
 		pDst[6] = pSrc[6] - 128;
 		pDst[7] = pSrc[7] - 128;
-}} void jpeg_encoder_load_block_8_8(struct jpeg_encoder *self, int x, int y, int c)
+	}
+}
+
+void jpeg_encoder_load_block_8_8(struct jpeg_encoder *self, int x, int y, int c)
 {
 	uint8 *pSrc;
 	jpeg_sample_array_t *pDst = self->m_sample_array;
@@ -745,7 +788,10 @@ void jpeg_encoder_load_block_8_8_grey(struct jpeg_encoder *self, int x)
 		pDst[5] = pSrc[5 * 3] - 128;
 		pDst[6] = pSrc[6 * 3] - 128;
 		pDst[7] = pSrc[7 * 3] - 128;
-}} void jpeg_encoder_load_block_16_8(struct jpeg_encoder *self, int x, int c)
+	}
+}
+
+void jpeg_encoder_load_block_16_8(struct jpeg_encoder *self, int x, int c)
 {
 	uint8 *pSrc1, *pSrc2;
 	jpeg_sample_array_t *pDst = self->m_sample_array;
@@ -802,7 +848,11 @@ void jpeg_encoder_load_block_8_8_grey(struct jpeg_encoder *self, int x)
 		pDst[5] = ((pSrc1[10 * 3] + pSrc1[11 * 3]) >> 1) - 128;
 		pDst[6] = ((pSrc1[12 * 3] + pSrc1[13 * 3]) >> 1) - 128;
 		pDst[7] = ((pSrc1[14 * 3] + pSrc1[15 * 3]) >> 1) - 128;
-}} void jpeg_encoder_load_quantized_coefficients(struct jpeg_encoder *self, int component_num)
+	}
+}
+
+void jpeg_encoder_load_quantized_coefficients(struct jpeg_encoder *self,
+					      int component_num)
 {
 	int32 *q = self->m_quantization_tables[component_num > 0];
 	int16 *pDst = self->m_coefficient_array;
@@ -833,16 +883,20 @@ void jpeg_encoder_load_block_8_8_grey(struct jpeg_encoder *self, int x)
 void jpeg_encoder_flush_output_buffer(struct jpeg_encoder *self)
 {
 	if (self->m_out_buf_left != JPGE_OUT_BUF_SIZE)
-		self->m_all_stream_writes_succeeded = self->m_all_stream_writes_succeeded
+		self->m_all_stream_writes_succeeded =
+		    self->m_all_stream_writes_succeeded
 		    && self->m_pStream->put_buf(self->m_out_buf,
-					  JPGE_OUT_BUF_SIZE - self->m_out_buf_left);
+						JPGE_OUT_BUF_SIZE -
+						self->m_out_buf_left);
 	self->m_pOut_buf = self->m_out_buf;
 	self->m_out_buf_left = JPGE_OUT_BUF_SIZE;
 }
 
-void jpeg_encoder_put_bits(struct jpeg_encoder *self, unsigned bits, unsigned len)
+void jpeg_encoder_put_bits(struct jpeg_encoder *self, unsigned bits,
+			   unsigned len)
 {
-	self->m_bit_buffer |= ((uint32) bits << (24 - (self->m_bits_in += len)));
+	self->m_bit_buffer |=
+	    ((uint32) bits << (24 - (self->m_bits_in += len)));
 	while (self->m_bits_in >= 8) {
 		uint8 c;
 
@@ -855,7 +909,8 @@ void jpeg_encoder_put_bits(struct jpeg_encoder *self, unsigned bits, unsigned le
 	}
 }
 
-void jpeg_encoder_code_coefficients_pass_one(struct jpeg_encoder *self, int component_num)
+void jpeg_encoder_code_coefficients_pass_one(struct jpeg_encoder *self,
+					     int component_num)
 {
 	if (component_num >= 3)
 		return;		// just to shut up static analysis
@@ -863,9 +918,11 @@ void jpeg_encoder_code_coefficients_pass_one(struct jpeg_encoder *self, int comp
 
 	int16 *src = self->m_coefficient_array;
 	uint32 *dc_count =
-	    component_num ? self->m_huff_count[0 + 1] : self->m_huff_count[0 + 0],
+	    component_num ? self->m_huff_count[0 + 1] : self->m_huff_count[0 +
+									   0],
 	    *ac_count =
-	    component_num ? self->m_huff_count[2 + 1] : self->m_huff_count[2 + 0];
+	    component_num ? self->m_huff_count[2 + 1] : self->m_huff_count[2 +
+									   0];
 	temp1 = src[0] - self->m_last_dc_val[component_num];
 	self->m_last_dc_val[component_num] = src[0];
 	if (temp1 < 0)
@@ -898,7 +955,8 @@ void jpeg_encoder_code_coefficients_pass_one(struct jpeg_encoder *self, int comp
 		ac_count[0]++;
 }
 
-void jpeg_encoder_code_coefficients_pass_two(struct jpeg_encoder *self, int component_num)
+void jpeg_encoder_code_coefficients_pass_two(struct jpeg_encoder *self,
+					     int component_num)
 {
 	int i, j, run_len, nbits, temp1, temp2;
 
@@ -940,7 +998,8 @@ void jpeg_encoder_code_coefficients_pass_two(struct jpeg_encoder *self, int comp
 
 		else {
 			while (run_len >= 16) {
-				jpeg_encoder_put_bits(self, codes[1][0xF0], code_sizes[1][0xF0]);
+				jpeg_encoder_put_bits(self, codes[1][0xF0],
+						      code_sizes[1][0xF0]);
 				run_len -= 16;
 			}
 			if ((temp2 = temp1) < 0) {
@@ -951,8 +1010,10 @@ void jpeg_encoder_code_coefficients_pass_two(struct jpeg_encoder *self, int comp
 			while (temp1 >>= 1)
 				nbits++;
 			j = (run_len << 4) + nbits;
-			jpeg_encoder_put_bits(self, codes[1][j], code_sizes[1][j]);
-			jpeg_encoder_put_bits(self, temp2 & ((1 << nbits) - 1), nbits);
+			jpeg_encoder_put_bits(self, codes[1][j],
+					      code_sizes[1][j]);
+			jpeg_encoder_put_bits(self, temp2 & ((1 << nbits) - 1),
+					      nbits);
 			run_len = 0;
 		}
 	}
@@ -979,7 +1040,8 @@ void jpeg_encoder_process_mcu_row(struct jpeg_encoder *self)
 		for (i = 0; i < self->m_mcus_per_row; i++) {
 			jpeg_encoder_load_block_8_8_grey(self, i);
 			jpeg_encoder_code_block(self, 0);
-	}}
+		}
+	}
 
 	else if ((self->m_comp_h_samp[0] == 1) && (self->m_comp_v_samp[0] == 1)) {
 		for (i = 0; i < self->m_mcus_per_row; i++) {
@@ -989,7 +1051,8 @@ void jpeg_encoder_process_mcu_row(struct jpeg_encoder *self)
 			jpeg_encoder_code_block(self, 1);
 			jpeg_encoder_load_block_8_8(self, i, 0, 2);
 			jpeg_encoder_code_block(self, 2);
-	}}
+		}
+	}
 
 	else if ((self->m_comp_h_samp[0] == 2) && (self->m_comp_v_samp[0] == 1)) {
 		for (i = 0; i < self->m_mcus_per_row; i++) {
@@ -1001,7 +1064,8 @@ void jpeg_encoder_process_mcu_row(struct jpeg_encoder *self)
 			jpeg_encoder_code_block(self, 1);
 			jpeg_encoder_load_block_16_8_8(self, i, 2);
 			jpeg_encoder_code_block(self, 2);
-	}}
+		}
+	}
 
 	else if ((self->m_comp_h_samp[0] == 2) && (self->m_comp_v_samp[0] == 2)) {
 		for (i = 0; i < self->m_mcus_per_row; i++) {
@@ -1017,14 +1081,19 @@ void jpeg_encoder_process_mcu_row(struct jpeg_encoder *self)
 			jpeg_encoder_code_block(self, 1);
 			jpeg_encoder_load_block_16_8(self, i, 2);
 			jpeg_encoder_code_block(self, 2);
-	}}
-} int jpeg_encoder_terminate_pass_one(struct jpeg_encoder *self)
+		}
+	}
+}
+
+int jpeg_encoder_terminate_pass_one(struct jpeg_encoder *self)
 {
 	jpeg_encoder_optimize_huffman_table(self, 0 + 0, DC_LUM_CODES);
 	jpeg_encoder_optimize_huffman_table(self, 2 + 0, AC_LUM_CODES);
 	if (self->m_num_components > 1) {
-		jpeg_encoder_optimize_huffman_table(self, 0 + 1, DC_CHROMA_CODES);
-		jpeg_encoder_optimize_huffman_table(self, 2 + 1, AC_CHROMA_CODES);
+		jpeg_encoder_optimize_huffman_table(self, 0 + 1,
+						    DC_CHROMA_CODES);
+		jpeg_encoder_optimize_huffman_table(self, 2 + 1,
+						    AC_CHROMA_CODES);
 	}
 	return jpeg_encoder_second_pass_init(self);
 }
@@ -1034,7 +1103,7 @@ int jpeg_encoder_terminate_pass_two(struct jpeg_encoder *self)
 	jpeg_encoder_put_bits(self, 0x7F, 7);
 	jpeg_encoder_flush_output_buffer(self);
 	jpeg_encoder_emit_marker(self, M_EOI);
-	self->m_pass_num++;		// purposely bump up m_pass_num, for debugging
+	self->m_pass_num++;	// purposely bump up m_pass_num, for debugging
 	return TRUE;
 }
 
@@ -1061,7 +1130,7 @@ int jpeg_encoder_process_end_of_image(struct jpeg_encoder *self)
 
 void jpeg_encoder_load_mcu(struct jpeg_encoder *self, const void *pSrc)
 {
-	const uint8 *Psrc = (const uint8*)(pSrc);
+	const uint8 *Psrc = (const uint8 *)(pSrc);
 	int i;
 
 	uint8 *pDst = self->m_mcu_lines[self->m_mcu_y_ofs];	// OK to write up to m_image_bpl_xlt bytes to pDst
@@ -1090,20 +1159,25 @@ void jpeg_encoder_load_mcu(struct jpeg_encoder *self, const void *pSrc)
 
 	// Possibly duplicate pixels at end of scanline if not a multiple of 8 or 16
 	if (self->m_num_components == 1)
-		memset(self->m_mcu_lines[self->m_mcu_y_ofs] + self->m_image_bpl_xlt,
-		       pDst[self->m_image_bpl_xlt - 1], self->m_image_x_mcu - self->m_image_x);
+		memset(self->m_mcu_lines[self->m_mcu_y_ofs] +
+		       self->m_image_bpl_xlt, pDst[self->m_image_bpl_xlt - 1],
+		       self->m_image_x_mcu - self->m_image_x);
 
 	else {
 		const uint8 y = pDst[self->m_image_bpl_xlt - 3 + 0], cb =
 		    pDst[self->m_image_bpl_xlt - 3 + 1], cr =
 		    pDst[self->m_image_bpl_xlt - 3 + 2];
-		uint8 *q = self->m_mcu_lines[self->m_mcu_y_ofs] + self->m_image_bpl_xlt;
+		uint8 *q =
+		    self->m_mcu_lines[self->m_mcu_y_ofs] +
+		    self->m_image_bpl_xlt;
 
 		for (i = self->m_image_x; i < self->m_image_x_mcu; i++) {
 			*q++ = y;
 			*q++ = cb;
 			*q++ = cr;
-	}} if (++self->m_mcu_y_ofs == self->m_mcu_y) {
+		}
+	}
+	if (++self->m_mcu_y_ofs == self->m_mcu_y) {
 		jpeg_encoder_process_mcu_row(self);
 		self->m_mcu_y_ofs = 0;
 	}
@@ -1122,14 +1196,16 @@ jpeg_encoder_jpeg_encoder(struct jpeg_encoder *self)
 	clear();
 }
 
-jpeg_encoder_~jpeg_encoder(struct jpeg_encoder *self)
+jpeg_encoder_ ~ jpeg_encoder(struct jpeg_encoder *self)
 {
 	deinit();
 }
 #endif
 
-int jpeg_encoder_encoder_init(struct jpeg_encoder *self, struct jpeg_output_stream *pStream, int width, int height,
-			  int src_channels, const struct jpeg_params *comp_params)
+int jpeg_encoder_encoder_init(struct jpeg_encoder *self,
+			      struct jpeg_output_stream *pStream, int width,
+			      int height, int src_channels,
+			      const struct jpeg_params *comp_params)
 {
 	jpeg_encoder_deinit(self);
 	if (((!pStream) || (width < 1) || (height < 1))
@@ -1145,7 +1221,8 @@ void jpeg_encoder_deinit(struct jpeg_encoder *self)
 {
 	jpge_free(self->m_mcu_lines[0]);
 	jpeg_encoder_clear(self);
-} int jpeg_encoder_process_scanline(struct jpeg_encoder *self, const void *pScanline)
+} int jpeg_encoder_process_scanline(struct jpeg_encoder *self,
+				    const void *pScanline)
 {
 	if ((self->m_pass_num < 1) || (self->m_pass_num > 2))
 		return FALSE;
@@ -1171,7 +1248,7 @@ class cfile_stream:public output_stream {
 
 	FILE *self->m_pFile;
 	int self->m_bStatus;
- public:cfile_stream():m_pFile(NULL), self->m_bStatus(FALSE) {
+ public: cfile_stream():m_pFile(NULL), self->m_bStatus(FALSE) {
 	} virtual ~ cfile_stream() {
 		close();
 	} int open(const char *pFilename) {
@@ -1190,18 +1267,20 @@ class cfile_stream:public output_stream {
 		return self->m_bStatus;
 	}
 	virtual int put_buf(const void *pBuf, int len) {
-		m_bStatus = self->m_bStatus && (fwrite(pBuf, len, 1, self->m_pFile) == 1);
+		m_bStatus = self->m_bStatus
+		    && (fwrite(pBuf, len, 1, self->m_pFile) == 1);
 		return self->m_bStatus;
 	}
 	unsigned get_size() const {
 		return self->m_pFile ? ftell(m_pFile) : 0;
-}};
+	}
+};
 
 // Writes JPEG image to file.
 int compress_image_to_jpeg_file(const char *pFilename, int width,
-				 int height, int num_channels,
-				 const uint8 * pImage_data,
-				 const params & comp_params)
+				int height, int num_channels,
+				const uint8 * pImage_data,
+				const params & comp_params)
 {
 	cfile_stream dst_stream;
 	int i;
@@ -1210,6 +1289,7 @@ int compress_image_to_jpeg_file(const char *pFilename, int width,
 	if (!dst_stream.open(pFilename))
 		return FALSE;
 	jpge_jpeg_encoder dst_image;
+
 	if (!dst_image.init
 	    (&dst_stream, width, height, num_channels, comp_params))
 		return FALSE;
@@ -1235,8 +1315,8 @@ class memory_stream:public output_stream {
 	uint8 *m_pBuf;
 	unsigned self->m_buf_size, self->m_buf_ofs;
 
- public:memory_stream(void *pBuf,
-		      unsigned buf_size):m_pBuf(CAST(uint8 *) (pBuf)),
+ public: memory_stream(void *pBuf,
+		       unsigned buf_size):m_pBuf(CAST(uint8 *) (pBuf)),
 	    self->m_buf_size(buf_size), self->m_buf_ofs(0) {
 	} virtual ~ memory_stream() {
 	} virtual int put_buf(const void *pBuf, int len) {
@@ -1250,12 +1330,13 @@ class memory_stream:public output_stream {
 	}
 	unsigned get_size() const {
 		return self->m_buf_ofs;
-}};
+	}
+};
 int compress_image_to_jpeg_file_in_memory(void *pDstBuf, int &buf_size,
-					   int width, int height,
-					   int num_channels,
-					   const uint8 * pImage_data,
-					   const params & comp_params)
+					  int width, int height,
+					  int num_channels,
+					  const uint8 * pImage_data,
+					  const params & comp_params)
 {
 	unsigned pass_index;
 	int i;
@@ -1266,6 +1347,7 @@ int compress_image_to_jpeg_file_in_memory(void *pDstBuf, int &buf_size,
 
 	buf_size = 0;
 	jpge_jpeg_encoder dst_image;
+
 	if (!dst_image.init
 	    (&dst_stream, width, height, num_channels, comp_params))
 		return FALSE;
