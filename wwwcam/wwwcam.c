@@ -193,6 +193,7 @@ static int current_image_get(mihl_cnx_t *cnx, const char *tag, const char *host,
 	return 0;
 }
 
+#if defined(WITH_LIBJPEG) && WITH_LIBJPEG
 static int save_jpeg(unsigned char **buf, size_t *len, int quality, unsigned char *data, int width, int height, int bpl)
 {
 	struct jpeg_compress_struct cinfo;
@@ -231,6 +232,26 @@ static int save_jpeg(unsigned char **buf, size_t *len, int quality, unsigned cha
 
 	return 0;
 }
+#else
+#include <jpge.h>
+static int save_jpeg(unsigned char **buf, size_t *len, int quality, unsigned char *data, int width, int height, int bpl)
+{
+	struct jpeg_params params;
+	void *pbuf = NULL;
+	int plen = 0;
+
+	jpeg_params_init(&params);
+	params.m_quality = quality;
+
+	if (!compress_image_to_jpeg_file_alloc_memory(&pbuf, &plen, width, height, 3, data, &params)) {
+		return -1;
+	}
+	*buf = pbuf;
+	*len = plen;
+
+	return 0;
+}
+#endif
 
 static void new_frame(void *ctx, webcam_t *cam, unsigned char *pixels, size_t bpl, size_t size)
 {
