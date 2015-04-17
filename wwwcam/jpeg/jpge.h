@@ -56,12 +56,28 @@ int compress_image_to_jpeg_file_in_memory(void *pBuf, int *buf_size,
 					  const struct jpeg_params
 					  *comp_params);
 
+// Writes JPEG image to allocated memory buffer. 
+int compress_image_to_jpeg_file_alloc_memory(void **pBuf, int *buf_size,
+					  int width, int height,
+					  int num_channels,
+					  const uint8 * pImage_data,
+					  const struct jpeg_params
+					  *comp_params);
+
 // Output stream abstract class - used by the jpeg_encoder class to write to the output stream. 
 // put_buf() is generally called with len==JPGE_OUT_BUF_SIZE bytes, but for headers it'll be called with smaller amounts.
 struct jpeg_output_stream {
-	void (*close) (void);
-	int (*put_buf) (const void *pbuf, int len);
+	void *ctx;
+	void (*close) (void *ctx);
+	int (*put_buf)(void *ctx, const void *pbuf, int len);
 };
+
+// Writes JPEG image to a generic buffer. 
+// num_channels must be 1 (Y) or 3 (RGB), image pitch must be width*num_channels.
+int compress_image_to_output_stream(struct jpeg_output_stream *pOutputStream, int width,
+				int height, int num_channels,
+				const uint8 * pImage_data,
+				const struct jpeg_params *comp_params);
 
 // Lower level jpeg_encoder class - useful if more control is needed than the above helper functions.
 struct jpeg_encoder;
@@ -118,6 +134,7 @@ struct jpeg_encoder {
 	uint8 m_pass_num;
 	int m_all_stream_writes_succeeded;
 };
+
 void jpeg_encoder_optimize_huffman_table(struct jpeg_encoder *self,
 					 int table_num, int table_len);
 void jpeg_encoder_emit_byte(struct jpeg_encoder *self, uint8 i);
@@ -165,26 +182,13 @@ int jpeg_encoder_process_end_of_image(struct jpeg_encoder *self);
 void jpeg_encoder_load_mcu(struct jpeg_encoder *self, const void *src);
 void jpeg_encoder_clear(struct jpeg_encoder *self);
 void jpeg_encoder_init(struct jpeg_encoder *self);
-static inline const struct jpeg_params *jpeg_encoder_get_params(struct
-								jpeg_encoder
-								*self)
-{
-	return &self->m_params;
-}
 
-	// Deinitializes the compressor, freeing any allocated memory. May be called at any time.
-static inline unsigned jpeg_encoder_get_total_passes(struct
-						     jpeg_encoder
-						     *self)
-{
-	return self->m_params.m_two_pass_flag ? 2 : 1;
-}
+const struct jpeg_params *jpeg_encoder_get_params(struct jpeg_encoder *self);
 
-static inline unsigned jpeg_encoder_get_cur_pass(struct jpeg_encoder
-						 *self)
-{
-	return self->m_pass_num;
-}
+// Deinitializes the compressor, freeing any allocated memory. May be called at any time.
+unsigned jpeg_encoder_get_total_passes(struct jpeg_encoder *self);
+
+unsigned jpeg_encoder_get_cur_pass(struct jpeg_encoder *self);
 
 /* extern "C" { */
 #ifdef __cplusplus

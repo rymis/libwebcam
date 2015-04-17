@@ -448,7 +448,7 @@ void jpeg_encoder_emit_byte(struct jpeg_encoder *self, uint8 i)
 {
 	self->m_all_stream_writes_succeeded =
 	    self->m_all_stream_writes_succeeded
-	    && self->m_pStream->put_buf(&i, 1);
+	    && self->m_pStream->put_buf(self->m_pStream->ctx, &i, 1);
 }
 
 void jpeg_encoder_emit_word(struct jpeg_encoder *self, unsigned i)
@@ -919,7 +919,7 @@ void jpeg_encoder_flush_output_buffer(struct jpeg_encoder *self)
 	if (self->m_out_buf_left != JPGE_OUT_BUF_SIZE)
 		self->m_all_stream_writes_succeeded =
 		    self->m_all_stream_writes_succeeded
-		    && self->m_pStream->put_buf(self->m_out_buf,
+		    && self->m_pStream->put_buf(self->m_pStream->ctx, self->m_out_buf,
 						JPGE_OUT_BUF_SIZE -
 						self->m_out_buf_left);
 	self->m_pOut_buf = self->m_out_buf;
@@ -1304,131 +1304,203 @@ int jpeg_encoder_process_scanline(struct jpeg_encoder *self,
 	return self->m_all_stream_writes_succeeded;
 }
 
-#if 0
+const struct jpeg_params *jpeg_encoder_get_params(struct jpeg_encoder *self)
+{
+	return &self->m_params;
+}
+
+unsigned jpeg_encoder_get_total_passes(struct jpeg_encoder *self)
+{
+	return self->m_params.m_two_pass_flag ? 2 : 1;
+}
+
+unsigned jpeg_encoder_get_cur_pass(struct jpeg_encoder *self)
+{
+	return self->m_pass_num;
+}
+int compress_image_to_output_stream(struct jpeg_output_stream *dst_stream, int width,
+				int height, int num_channels,
+				const uint8 * pImage_data,
+				const struct jpeg_params *comp_params)
+{
+	int i;
+	unsigned pass_index;
+	struct jpeg_encoder *dst_image;
+
+	dst_image = jpeg_encoder_new();
+	if (!dst_image) {
+		return FALSE;
+	}
+
+	if (!jpeg_encoder_encoder_init(dst_image, dst_stream, width, height, num_channels, comp_params)) {
+		jpeg_encoder_free(dst_image);
+		return FALSE;
+	}
+
+	for (pass_index = 0;
+	     pass_index < jpeg_encoder_get_total_passes(dst_image); pass_index++) {
+		for (i = 0; i < height; i++) {
+			const uint8 *pBuf =
+			    pImage_data + i * width * num_channels;
+			if (!jpeg_encoder_process_scanline(dst_image, pBuf)) {
+				jpeg_encoder_free(dst_image);
+				return FALSE;
+			}
+		}
+		if (!jpeg_encoder_process_scanline(dst_image, NULL)) {
+			jpeg_encoder_free(dst_image);
+			return FALSE;
+		}
+	}
+	jpeg_encoder_deinit(dst_image);
+
+	/* dst_stream.close(dst_stream.ctx); */
+	jpeg_encoder_free(dst_image);
+
+	return TRUE;
+}
 // Higher level wrappers/examples (optional).
 #include <stdio.h>
-class cfile_stream:public output_stream {
-	cfile_stream(const cfile_stream &);
-	cfile_stream & operator=(const cfile_stream &);
 
-	FILE *self->m_pFile;
-	int self->m_bStatus;
- public: cfile_stream():m_pFile(NULL), self->m_bStatus(FALSE) {
-	} virtual ~ cfile_stream() {
-		close();
-	} int open(const char *pFilename) {
-		close();
-		m_pFile = fopen(pFilename, "wb");
-		m_bStatus = (self->m_pFile != NULL);
-		return self->m_bStatus;
-	}
-	int close() {
-		if (m_pFile) {
-			if (fclose(m_pFile) == EOF) {
-				m_bStatus = FALSE;
-			}
-			m_pFile = NULL;
-		}
-		return self->m_bStatus;
-	}
-	virtual int put_buf(const void *pBuf, int len) {
-		m_bStatus = self->m_bStatus
-		    && (fwrite(pBuf, len, 1, self->m_pFile) == 1);
-		return self->m_bStatus;
-	}
-	unsigned get_size() const {
-		return self->m_pFile ? ftell(m_pFile) : 0;
-	}
-};
+/* stdio stream: */
+static void stdio_close(void *f)
+{
+	fclose((FILE*)f);
+}
+
+static int stdio_put_buf(void *ctx, const void *pbuf, int len)
+{
+	FILE *f = ctx;
+
+	return (fwrite(pbuf, len, 1, f) == 1);
+}
 
 // Writes JPEG image to file.
 int compress_image_to_jpeg_file(const char *pFilename, int width,
 				int height, int num_channels,
 				const uint8 * pImage_data,
-				const params & comp_params)
+				const struct jpeg_params* comp_params)
 {
-	cfile_stream dst_stream;
-	int i;
-	unsigned pass_index;
+	struct jpeg_output_stream dst_stream = {
+		NULL,
+		stdio_close,
+		stdio_put_buf
+	};
 
-	if (!dst_stream.open(pFilename))
+	dst_stream.ctx = fopen(pFilename, "wb");
+	if (!dst_stream.ctx)
 		return FALSE;
-	jpge_jpeg_encoder dst_image;
 
-	if (!dst_image.init
-	    (&dst_stream, width, height, num_channels, comp_params))
+	if (!compress_image_to_output_stream(&dst_stream, width, height, num_channels,
+				pImage_data, comp_params)) {
+		stdio_close(dst_stream.ctx);
 		return FALSE;
-	for (pass_index = 0;
-	     pass_index < dst_image.get_total_passes(); pass_index++) {
-		for (i = 0; i < height; i++) {
-			const uint8 *pBuf =
-			    pImage_data + i * width * num_channels;
-			if (!dst_image.process_scanline(pBuf))
-				return FALSE;
-		}
-		if (!dst_image.process_scanline(NULL))
-			return FALSE;
 	}
-	dst_image.deinit();
-	return dst_stream.close();
+
+	return fclose((FILE*)dst_stream.ctx) == 0;
 }
 
-class memory_stream:public output_stream {
-	memory_stream(const memory_stream &);
-	memory_stream & operator=(const memory_stream &);
-
-	uint8 *m_pBuf;
-	unsigned self->m_buf_size, self->m_buf_ofs;
-
- public: memory_stream(void *pBuf,
-		       unsigned buf_size):m_pBuf(CAST(uint8 *) (pBuf)),
-	    self->m_buf_size(buf_size), self->m_buf_ofs(0) {
-	} virtual ~ memory_stream() {
-	} virtual int put_buf(const void *pBuf, int len) {
-		unsigned buf_remaining = self->m_buf_size - self->m_buf_ofs;
-
-		if ((uint) len > buf_remaining)
-			return FALSE;
-		memcpy(m_pBuf + self->m_buf_ofs, pBuf, len);
-		m_buf_ofs += len;
-		return TRUE;
-	}
-	unsigned get_size() const {
-		return self->m_buf_ofs;
-	}
+struct memstream {
+	unsigned char *buf;
+	size_t buf_len;
+	size_t pos;
 };
-int compress_image_to_jpeg_file_in_memory(void *pDstBuf, int &buf_size,
+
+static void memstream_close(void *ctx)
+{
+}
+
+static int memstream_put_buf(void *ctx, const void *pbuf, int len)
+{
+	struct memstream *s = ctx;
+
+	if (s->pos + len > s->buf_len) {
+		return FALSE;
+	}
+
+	memcpy(s->buf + s->pos, pbuf, len);
+
+	s->pos += len;
+
+	return TRUE;
+}
+
+int compress_image_to_jpeg_file_in_memory(void *pDstBuf, int *buf_size,
+					  int width, int height,
+					  int num_channels,
+					  const uint8 *pImage_data,
+					  const struct jpeg_params *comp_params)
+{
+	struct memstream stream = { pDstBuf, *buf_size, 0 };
+	struct jpeg_output_stream dst_stream = { &stream, memstream_close, memstream_put_buf };
+
+	if (!compress_image_to_output_stream(&dst_stream, width, height, num_channels,
+				pImage_data, comp_params)) {
+		memstream_close(dst_stream.ctx);
+		return FALSE;
+	}
+
+	*buf_size = stream.pos;
+
+	return TRUE;
+}
+
+static void amem_close(void *ctx)
+{
+}
+
+static int amem_put_buf(void *ctx, const void *pbuf, int len)
+{
+	struct memstream *s = ctx;
+	size_t l;
+	void *tmp;
+
+	if (s->pos + len > s->buf_len) {
+		for (l = s->buf_len; l < s->pos + len; l *= 2) {
+			if (l < s->buf_len) /* Overflow! */
+				return FALSE;
+		}
+
+		tmp = realloc(s->buf, l);
+		if (!tmp) {
+			return FALSE;
+		}
+
+		s->buf = tmp;
+	}
+
+	memcpy(s->buf + s->pos, pbuf, len);
+	s->pos += len;
+
+	return TRUE;
+}
+
+// Writes JPEG image to allocated memory buffer. 
+int compress_image_to_jpeg_file_alloc_memory(void **pBuf, int *buf_size,
 					  int width, int height,
 					  int num_channels,
 					  const uint8 * pImage_data,
-					  const params & comp_params)
+					  const struct jpeg_params
+					  *comp_params)
 {
-	unsigned pass_index;
-	int i;
+	struct memstream stream = { malloc(1024), 1024, 0 };
+	struct jpeg_output_stream dst_stream = { &stream, amem_close, amem_put_buf };
 
-	if ((!pDstBuf) || (!buf_size))
+	if (!stream.buf) {
 		return FALSE;
-	memory_stream dst_stream(pDstBuf, buf_size);
-
-	buf_size = 0;
-	jpge_jpeg_encoder dst_image;
-
-	if (!dst_image.init
-	    (&dst_stream, width, height, num_channels, comp_params))
-		return FALSE;
-	for (pass_index = 0;
-	     pass_index < dst_image.get_total_passes(); pass_index++) {
-		for (i = 0; i < height; i++) {
-			const uint8 *pScanline =
-			    pImage_data + i * width * num_channels;
-			if (!dst_image.process_scanline(pScanline))
-				return FALSE;
-		}
-		if (!dst_image.process_scanline(NULL))
-			return FALSE;
 	}
-	dst_image.deinit();
-	buf_size = dst_stream.get_size();
+
+	if (!compress_image_to_output_stream(&dst_stream, width, height, num_channels,
+				pImage_data, comp_params)) {
+		free(stream.buf);
+		stream.buf = NULL;
+		memstream_close(dst_stream.ctx);
+		return FALSE;
+	}
+
+	*pBuf = stream.buf;
+	*buf_size = stream.pos;
+
 	return TRUE;
 }
-#endif
+
