@@ -642,7 +642,102 @@ int optcfg_parse_file(struct optcfg *cfg, FILE *f)
  */
 int optcfg_default_config(struct optcfg *cfg, const char *prog);
 
-struct optcfg* optcfg_parse_options(const char *prog,           /* Name of the program */
+int optcfg_parse_options(struct optcfg *tmpl,
+		const char *prog,           /* Name of the program */
 		int argc, const char *argv[],                   /* argc, argv          */
-		struct optcfg_option *opts, unsigned opts_cnt); /* options             */
+		struct optcfg_option *opts, unsigned opts_cnt)  /* options             */
+{
+	int i;
+	unsigned j;
+	struct optcfg_option *opt;
+
+	for (i = 0; i < argc;) {
+		opt = NULL;
+		if (argv[i][0] == '-' && argv[i][1] == '-') { /* Long argument */
+			for (j = 0; j < opts_cnt; j++) {
+				if (sEQ(argv[i] + 2, opts[j].name)) {
+					opt = opts + j;
+					break;
+				}
+			}
+		} else if (argv[i][0] == '-') { /* short option */
+			if (strlen(argv[i]) != 2) { /* TODO: -abcd??? */
+				err("Unknown option: %s", argv[i]);
+				return -1;
+			}
+
+			for (j = 0; j < opts_cnt; j++) {
+				if (argv[i][1] == opts[j].opt) {
+					opt = opts + j;
+					break;
+				}
+			}
+		} else {
+			for (j = 0; j < opts_cnt; j++) {
+				if (opts[j].name == NULL) {
+					opt = opts + j;
+					break;
+				}
+			}
+
+			if (opt) {
+				optcfg_set(tmpl, "", argv[i]);
+				continue;
+			}
+		}
+
+		if (!opt) {
+			if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+				optcfg_print_help(prog, opts, opts_cnt, stdout);
+				exit(0);
+			}
+			err("Unknown option `%s'", argv[i]);
+			return -1;
+		}
+
+		if (opt->flags & OPTCFG_FLAG) {
+			optcfg_set(tmpl, opt->name, "yes");
+			i++;
+		} else {
+			if (i + 1 >= argc) {
+				err("Option %s needs argument", argv[i]);
+			}
+			optcfg_set(tmpl, opt->name, argv[i + 1]);
+
+			if (opt->flags & OPTCFG_CFGFILE) {
+				FILE *f = fopen(argv[i + 1], "rt");
+				if (!f) {
+					err("Can't open file `%s'", argv[i + 1]);
+					return -1;
+				}
+
+				if (optcfg_parse_file(tmpl, f)) {
+					fclose(f);
+					err("Can't parse config `%s'", argv[i + 1]);
+					return -1;
+				}
+
+				fclose(f);
+			}
+
+			i += 2;
+		}
+	}
+
+	for (j = 0; j < opts_cnt; j++) {
+		if (!(opts[j].flags & OPTCFG_OPTIONAL)) {
+			if (!optcfg_get(tmpl, opts->name, NULL)) {
+				err("Option %s is not specified in command line or configuration file!");
+				return -1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+void optcfg_print_help(const char *prog, struct optcfg_option *opts, unsigned opts_cnt, FILE *out)
+{
+	fprintf(out, "%s\n", prog);
+}
 

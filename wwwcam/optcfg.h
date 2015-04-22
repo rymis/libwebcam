@@ -53,9 +53,12 @@ int optcfg_parse_file(struct optcfg *cfg, FILE *from);
  */
 int optcfg_default_config(struct optcfg *cfg, const char *prog);
 
-struct optcfg* optcfg_parse_options(const char *prog,           /* Name of the program */
-		int argc, const char *argv[],                   /* argc, argv          */
-		struct optcfg_option *opts, unsigned opts_cnt); /* options             */
+int optcfg_parse_options(struct optcfg *config,                 /* configuration template */
+		const char *prog,                               /* Name of the program    */
+		int argc, const char *argv[],                   /* argc, argv             */
+		struct optcfg_option *opts, unsigned opts_cnt); /* options                */
+
+void optcfg_print_help(const char *prog, struct optcfg_option *opts, unsigned opts_cnt, FILE *out);
 
 /* extern "C" { */
 #ifdef __cplusplus
