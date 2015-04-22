@@ -22,7 +22,7 @@ ELSE()
 	SET(JPGLIB "")
 ENDIF()
 
-ADD_EXECUTABLE(wwwcam wwwcam.c sound.c tinycthread.c cmdcfg.c ${JPGE_C})
+ADD_EXECUTABLE(wwwcam wwwcam.c sound.c tinycthread.c optcfg.c ${JPGE_C})
 
 IF(HAVE_LIBPTHREAD)
 	SET(PTHLIB "pthread")
