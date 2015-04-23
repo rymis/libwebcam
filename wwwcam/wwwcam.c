@@ -3,8 +3,10 @@
 #include <tcp_utils.h>
 #include <glovars.h>
 #include <signal.h>
+#include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/time.h>
 #include "optcfg.h"
 
 static char main_page_html[] =
@@ -47,6 +49,11 @@ static struct handler_st {
 	{ NULL, NULL, NULL, NULL }
 };
 
+static long delta_time(struct timeval *t1, struct timeval *t2)
+{
+	return (t2->tv_usec - t1->tv_usec) + (t2->tv_sec - t1->tv_sec) * 1000000;
+}
+
 int main(int argc, char *argv[])
 {
 	struct optcfg_option options[] = {
@@ -76,6 +83,8 @@ int main(int argc, char *argv[])
 	unsigned cam_cnt = 64;
 	webcam_t *cam;
 	mihl_ctx_t *ctx;
+	struct timeval last, cur;
+	long dtime;
 	
 	opts = optcfg_new();
 	if (!opts) {
@@ -89,6 +98,11 @@ int main(int argc, char *argv[])
 	if (optcfg_parse_options(opts, "wwwcam", argc - 1, argv + 1, options, options_cnt)) {
 		return EXIT_FAILURE;
 	}
+
+	dtime = optcfg_get_int(opts, "fps", 5);
+	if (dtime > 30 || dtime < 0)
+		dtime = 5;
+	dtime = 1000000 / dtime;
 
 	ctx = mihl_init(NULL, 8888, 16, MIHL_LOG_ERROR | MIHL_LOG_WARNING |
 			                                    MIHL_LOG_INFO | MIHL_LOG_INFO_VERBOSE);
@@ -141,18 +155,27 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Error: can't get frames from camera!\n");
 			return 1;
 		}
+
+		gettimeofday(&last, NULL);
 	}
 	printf("           Ok\n");
 	fflush(stdout);
 
 	for (;;) {
+		int cam_status;
 		int status = mihl_server(ctx);
 
 		if (status == -2)
 			break;
 
-		if (webcam_wait_frame_cb(cam, new_frame, NULL, 10) < 0)
-			break;
+		gettimeofday(&cur, NULL);
+		if (delta_time(&last, &cur) > dtime) {
+			cam_status = webcam_wait_frame_cb(cam, new_frame, NULL, 10);
+			if (cam_status < 0)
+				break;
+			if (cam_status > 0)
+				memcpy(&last, &cur, sizeof(struct timeval));
+		}
 
 		if (exit_now)
 			break;
