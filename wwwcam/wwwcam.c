@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (optcfg_parse_options(opts, "wwwcam", argc, argv, options, options_cnt)) {
+	if (optcfg_parse_options(opts, "wwwcam", argc - 1, argv + 1, options, options_cnt)) {
 		return EXIT_FAILURE;
 	}
 

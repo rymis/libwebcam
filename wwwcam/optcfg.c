@@ -709,14 +709,14 @@ int optcfg_parse_options(struct optcfg *tmpl,
 			}
 		} else {
 			for (j = 0; j < opts_cnt; j++) {
-				if (opts[j].name == NULL) {
+				if (opts[j].opt == 0) {
 					opt = opts + j;
 					break;
 				}
 			}
 
 			if (opt) {
-				optcfg_set(tmpl, "", argv[i]);
+				optcfg_set(tmpl, opt->name, argv[i]);
 				continue;
 			}
 		}
@@ -736,6 +736,7 @@ int optcfg_parse_options(struct optcfg *tmpl,
 		} else {
 			if (i + 1 >= argc) {
 				err("Option %s needs argument", argv[i]);
+				return -1;
 			}
 			optcfg_set(tmpl, opt->name, argv[i + 1]);
 
@@ -761,7 +762,7 @@ int optcfg_parse_options(struct optcfg *tmpl,
 
 	for (j = 0; j < opts_cnt; j++) {
 		if (opts[j].flags & OPTCFG_MANDATORY) {
-			if (!optcfg_get(tmpl, opts->name, NULL)) {
+			if (!optcfg_get(tmpl, opts[j].name, NULL)) {
 				err("Option %s is not specified in command line or configuration file!");
 				return -1;
 			}
@@ -773,6 +774,41 @@ int optcfg_parse_options(struct optcfg *tmpl,
 
 void optcfg_print_help(const char *prog, struct optcfg_option *opts, unsigned opts_cnt, FILE *out)
 {
-	fprintf(out, "%s\n", prog);
+	unsigned i;
+
+	fprintf(out, "USAGE:\n%s", prog);
+	for (i = 0; i < opts_cnt; i++) {
+		fputc(' ', out);
+
+		if (!(opts[i].flags & OPTCFG_MANDATORY)) {
+			fputc('[', out);
+		}
+
+		if (opts[i].opt) {
+			fprintf(out, "--%s <%s>", opts[i].name, opts[i].name);
+		} else {
+			fprintf(out, "<%s>", opts[i].name);
+		}
+
+		if (!(opts[i].flags & OPTCFG_MANDATORY)) {
+			fputc(']', out);
+		}
+	}
+
+	fputc('\n', out);
+
+	for (i = 0; i < opts_cnt; i++) {
+		if (opts[i].opt) {
+			fprintf(out, "-%c <%s>\n--%s <%s>\n", opts[i].opt, opts[i].name, opts[i].name, opts[i].name);
+			fprintf(out, "\t%s", opts[i].help);
+			if (opts[i].defval) {
+				fprintf(out, " (default %s)\n", opts[i].defval);
+			} else {
+				fputc('\n', out);
+			}
+		} else {
+			fprintf(out, "<%s>\n\t%s\n", opts[i].name, opts[i].help);
+		}
+	}
 }
 
