@@ -26,9 +26,10 @@ struct optcfg_option {
 	const char *help;
 
 	int flags;
-#define OPTCFG_OPTIONAL      1
+#define OPTCFG_MANDATORY     1
 #define OPTCFG_FLAG          2
 #define OPTCFG_CFGFILE       4
+	const char *defval;
 };
 
 struct optcfg* optcfg_new(void);
@@ -55,7 +56,7 @@ int optcfg_default_config(struct optcfg *cfg, const char *prog);
 
 int optcfg_parse_options(struct optcfg *config,                 /* configuration template */
 		const char *prog,                               /* Name of the program    */
-		int argc, const char *argv[],                   /* argc, argv             */
+		int argc, char **argv,                   /* argc, argv             */
 		struct optcfg_option *opts, unsigned opts_cnt); /* options                */
 
 void optcfg_print_help(const char *prog, struct optcfg_option *opts, unsigned opts_cnt, FILE *out);

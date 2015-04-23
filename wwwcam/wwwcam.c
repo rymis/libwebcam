@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <time.h>
+#include "optcfg.h"
 
 static char main_page_html[] =
 #include "index_html.inc"
@@ -48,12 +49,49 @@ static struct handler_st {
 
 int main(int argc, char *argv[])
 {
-	mihl_ctx_t *ctx = mihl_init(NULL, 8888, 16, MIHL_LOG_ERROR | MIHL_LOG_WARNING |
-			                                    MIHL_LOG_INFO | MIHL_LOG_INFO_VERBOSE);
+	struct optcfg_option options[] = {
+		{ 'p', "port",
+			"Specify port number to serve", 0, "8888" },
+		{ 'h', "host",
+			"Specify host name to listen", 0, NULL },
+		{ 'F', "fps",
+			"Specify how many frames per second will be captured", 0, "5" },
+		{ 'c', "config",
+			"Load configuration from file", OPTCFG_CFGFILE, NULL },
+		{ 's', "enable-sound",
+			"Enable sound support", OPTCFG_FLAG, "no" },
+		{ 'd', "delay",
+			"Sound delay and fragment size in seconds", 0, "1" },
+		{ 'f', "frequency",
+			"Sound frequency in Hz.", 0, "8000" },
+		{ 'b', "bits",
+			"Bits per fragment of sound", 0, "8" },
+		{ 'S', "stereo",
+			"Enable stereo mode", OPTCFG_FLAG, "no" }
+	};
+	unsigned options_cnt = sizeof(options) / sizeof(options[0]);
+	struct optcfg *opts;
 	int i;
 	int cams[64];
 	unsigned cam_cnt = 64;
 	webcam_t *cam;
+	mihl_ctx_t *ctx;
+	
+	opts = optcfg_new();
+	if (!opts) {
+		return EXIT_FAILURE;
+	}
+
+	if (optcfg_default_config(opts, "wwwcam")) {
+		return EXIT_FAILURE;
+	}
+
+	if (optcfg_parse_options(opts, "wwwcam", argc, argv, options, options_cnt)) {
+		return EXIT_FAILURE;
+	}
+
+	ctx = mihl_init(NULL, 8888, 16, MIHL_LOG_ERROR | MIHL_LOG_WARNING |
+			                                    MIHL_LOG_INFO | MIHL_LOG_INFO_VERBOSE);
 
 	if (webcam_list(cams, &cam_cnt)) {
 		fprintf(stderr, "Error: Can't get list of cameras!\n");

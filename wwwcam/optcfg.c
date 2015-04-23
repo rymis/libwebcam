@@ -640,11 +640,46 @@ int optcfg_parse_file(struct optcfg *cfg, FILE *f)
  *   /etc/prog.conf
  * For Windows it is ${USERDRIVE}/${USERPATH}/prog.conf
  */
-int optcfg_default_config(struct optcfg *cfg, const char *prog);
+int optcfg_default_config(struct optcfg *cfg, const char *prog)
+{
+#if defined(WIN32) || defined(HAVE_WINDOWS_H)
+	return 0; /* TODO: default config in windows */
+#else
+	char path[512];
+	const char *home;
+	FILE *f;
+
+	snprintf(path, sizeof(path), "/etc/%s.conf", prog);
+	f = fopen(path, "rt");
+	if (f) {
+		if (optcfg_parse_file(cfg, f)) {
+			fclose(f);
+			return -1;
+		}
+
+		fclose(f);
+	}
+
+	home = getenv("HOME");
+	if (home) {
+		snprintf(path, sizeof(path), "%s/.%s/config", home, prog);
+		f = fopen(path, "rt");
+		if (f) {
+			if (optcfg_parse_file(cfg, f)) {
+				fclose(f);
+				return -1;
+			}
+			fclose(f);
+		}
+	}
+
+	return 0;
+#endif
+}
 
 int optcfg_parse_options(struct optcfg *tmpl,
 		const char *prog,           /* Name of the program */
-		int argc, const char *argv[],                   /* argc, argv          */
+		int argc, char **argv,                   /* argc, argv          */
 		struct optcfg_option *opts, unsigned opts_cnt)  /* options             */
 {
 	int i;
@@ -725,7 +760,7 @@ int optcfg_parse_options(struct optcfg *tmpl,
 	}
 
 	for (j = 0; j < opts_cnt; j++) {
-		if (!(opts[j].flags & OPTCFG_OPTIONAL)) {
+		if (opts[j].flags & OPTCFG_MANDATORY) {
 			if (!optcfg_get(tmpl, opts->name, NULL)) {
 				err("Option %s is not specified in command line or configuration file!");
 				return -1;
