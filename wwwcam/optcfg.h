@@ -61,6 +61,9 @@ int optcfg_parse_options(struct optcfg *config,                 /* configuration
 
 void optcfg_print_help(const char *prog, struct optcfg_option *opts, unsigned opts_cnt, FILE *out);
 
+/* Save configuration to file */
+int optcfg_save(struct optcfg *cfg, FILE *f);
+
 /* extern "C" { */
 #ifdef __cplusplus
 }

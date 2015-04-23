@@ -223,6 +223,7 @@ static int parse_int(const char *s, int *r)
 	int neg = 0;
 	int v = 0;
 	int v1;
+	const char *opt = s;
 
 	if (!s || !r)
 		return -1;
@@ -238,6 +239,7 @@ static int parse_int(const char *s, int *r)
 	if (*s == '0' && s[1] == 'x') {
 		s += 2;
 
+		v = 0;
 		while (*s) {
 			if (*s >= '0' && *s <= '9') {
 				v1 = v * 16 + (*s - '0');
@@ -247,27 +249,36 @@ static int parse_int(const char *s, int *r)
 				v1 = v * 16 + (*s - 'A') + 10;
 			} else {
 				/* Invalid characters */
+				err("Invalid character in integer (%s) `%s'", opt, s);
 				return -1;
 			}
 			
 			if (v1 < v) {
 				/* Overflow */
+				err("Integer overflow (%s)", opt);
 				return -1;
 			}
 			v = v1;
+			++s;
 		}
 	} else {
+		v = 0;
 		while (*s >= '0' && *s <= '9') {
 			v1 = v * 10 + (*s - '0');
-			if (v1 < v) /* Overflow */
+			if (v1 < v) { /* Overflow */
+				err("Integer overflow (%s)", opt);
 				return -1;
+			}
 			v = v1;
+			++s;
 		}
 
 		while (isspace(*s))
 			++s;
-		if (*s)
+		if (*s) {
+			err("Garbage after integer (%s) `%s'", opt, s);
 			return -1;
+		}
 	}
 
 	*r = neg? -v: v;
@@ -761,6 +772,12 @@ int optcfg_parse_options(struct optcfg *tmpl,
 	}
 
 	for (j = 0; j < opts_cnt; j++) {
+		if (opts[j].defval) {
+			if (!optcfg_get(tmpl, opts[j].name, NULL)) {
+				optcfg_set(tmpl, opts[j].name, opts[j].defval);
+			}
+		}
+
 		if (opts[j].flags & OPTCFG_MANDATORY) {
 			if (!optcfg_get(tmpl, opts[j].name, NULL)) {
 				err("Option %s is not specified in command line or configuration file!");
@@ -810,5 +827,50 @@ void optcfg_print_help(const char *prog, struct optcfg_option *opts, unsigned op
 			fprintf(out, "<%s>\n\t%s\n", opts[i].name, opts[i].help);
 		}
 	}
+}
+
+int optcfg_save(struct optcfg *cfg, FILE *f)
+{
+	unsigned i;
+	const char *p;
+	int specials;
+
+	/* TODO: error checking */
+	for (i = 0; i < cfg->count; i++) {
+		fprintf(f, "%s = ", cfg->names[i]);
+
+		specials = 0;
+		for (p = cfg->values[i]; *p; p++) {
+			if (*p >= 0 && *p <= ' ') {
+				++specials;
+				break;
+			}
+		}
+
+		if (specials) {
+			putc('"', f);
+			for (p = cfg->values[i]; *p; p++) {
+				if ((*p >= 0 && *p <= ' ') || *p == '"') {
+					putc('\\', f);
+					if (*p == '\n') {
+						putc('n', f);
+					} else if (*p == '\r') {
+						putc('r', f);
+					} else if (*p == '\t') {
+						putc('t', f);
+					} else {
+						putc(*p, f);
+					}
+				} else {
+					putc(*p, f);
+				}
+
+			}
+		} else {
+			fprintf(f, "%s\n", cfg->values[i]);
+		}
+	}
+
+	return 0;
 }
 

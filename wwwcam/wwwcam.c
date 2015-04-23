@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	struct optcfg_option options[] = {
 		{ 'p', "port",
 			"Specify port number to serve", 0, "8888" },
-		{ 'h', "host",
+		{ 'H', "host",
 			"Specify host name to listen", 0, NULL },
 		{ 'F', "fps",
 			"Specify how many frames per second will be captured", 0, "5" },
@@ -74,7 +74,9 @@ int main(int argc, char *argv[])
 		{ 'b', "bits",
 			"Bits per fragment of sound", 0, "8" },
 		{ 'S', "stereo",
-			"Enable stereo mode", OPTCFG_FLAG, "no" }
+			"Enable stereo mode", OPTCFG_FLAG, "no" },
+		{ 'e', "exec",
+			"Execute program as sound source", 0, NULL }
 	};
 	unsigned options_cnt = sizeof(options) / sizeof(options[0]);
 	struct optcfg *opts;
@@ -85,6 +87,8 @@ int main(int argc, char *argv[])
 	mihl_ctx_t *ctx;
 	struct timeval last, cur;
 	long dtime;
+	int port;
+	const char *host;
 	
 	opts = optcfg_new();
 	if (!opts) {
@@ -99,12 +103,22 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	optcfg_save(opts, stdout);
+
 	dtime = optcfg_get_int(opts, "fps", 5);
 	if (dtime > 30 || dtime < 0)
 		dtime = 5;
 	dtime = 1000000 / dtime;
 
-	ctx = mihl_init(NULL, 8888, 16, MIHL_LOG_ERROR | MIHL_LOG_WARNING |
+	port = optcfg_get_int(opts, "port", -1);
+	if (port < 0) {
+		fprintf(stderr, "Error: TCP port information is not found.\n");
+		return EXIT_FAILURE;
+	}
+
+	host = optcfg_get(opts, "host", NULL);
+
+	ctx = mihl_init(host, port, 16, MIHL_LOG_ERROR | MIHL_LOG_WARNING |
 			                                    MIHL_LOG_INFO | MIHL_LOG_INFO_VERBOSE);
 
 	if (webcam_list(cams, &cam_cnt)) {
