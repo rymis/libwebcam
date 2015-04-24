@@ -8,10 +8,38 @@
 #include <time.h>
 #include <sys/time.h>
 #include "optcfg.h"
+#include "sound.h"
 
-static char main_page_html[] =
+static char main_page_html_raw[] =
 #include "index_html.inc"
 ;
+
+static char main_page_html[16384];
+
+static void main_page_init(const char *nm)
+{
+	FILE *f;
+	ssize_t l;
+
+	if (nm) {
+		f = fopen(nm, "rt");
+		if (!f) {
+			fprintf(stderr, "Error: can't load `%s'\n", nm);
+			exit(EXIT_FAILURE);
+		}
+
+		l = fread(main_page_html, 1, sizeof(main_page_html) - 1, f);
+		fclose(f);
+		if (l < 0) {
+			fprintf(stderr, "Error: can't load `%s'\n", nm);
+			exit(EXIT_FAILURE);
+		}
+
+		main_page_html[l] = 0;
+	} else {
+		strcpy(main_page_html, main_page_html_raw);
+	}
+}
 
 /* Simple webcam-based http camera interface */
 
@@ -24,6 +52,8 @@ static void sigint(int sig)
 unsigned char *FRAME = NULL;
 size_t FRAME_SZ = 0;
 char CAM_NAME[256] = "";
+struct snd_ctx *sound = NULL;
+
 static void LOCK(void)
 {
 }
@@ -63,10 +93,10 @@ int main(int argc, char *argv[])
 			"Specify host name to listen", 0, NULL },
 		{ 'F', "fps",
 			"Specify how many frames per second will be captured", 0, "5" },
+		{ 'i', "index",
+			"Specify index.html file", 0, NULL },
 		{ 'c', "config",
 			"Load configuration from file", OPTCFG_CFGFILE, NULL },
-		{ 's', "enable-sound",
-			"Enable sound support", OPTCFG_FLAG, "no" },
 		{ 'd', "delay",
 			"Sound delay and fragment size in seconds", 0, "1" },
 		{ 'f', "frequency",
@@ -89,6 +119,8 @@ int main(int argc, char *argv[])
 	long dtime;
 	int port;
 	const char *host;
+	int bsecs, freq, bits, stereo;
+	const char *snd_cmd = NULL;
 	
 	opts = optcfg_new();
 	if (!opts) {
@@ -117,6 +149,8 @@ int main(int argc, char *argv[])
 	}
 
 	host = optcfg_get(opts, "host", NULL);
+
+	main_page_init(optcfg_get(opts, "index", NULL));
 
 	ctx = mihl_init(host, port, 16, MIHL_LOG_ERROR | MIHL_LOG_WARNING |
 			                                    MIHL_LOG_INFO | MIHL_LOG_INFO_VERBOSE);
@@ -174,6 +208,17 @@ int main(int argc, char *argv[])
 	}
 	printf("           Ok\n");
 	fflush(stdout);
+
+	/* Init sound: */
+	snd_cmd = optcfg_get(opts, "exec", NULL);
+	if (snd_cmd) {
+		bsecs = optcfg_get_int(opts, "delay", 1);
+		freq = optcfg_get_int(opts, "frequency", 8000);
+		bits = optcfg_get_int(opts, "bits", 8);
+		stereo = optcfg_get_flag(opts, "stereo");
+
+		sound = snd_open(snd_cmd, bsecs, 8, freq, bits, stereo);
+	}
 
 	for (;;) {
 		int cam_status;

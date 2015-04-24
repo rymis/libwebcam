@@ -303,6 +303,24 @@ int optcfg_get_int(struct optcfg *cfg, const char *name, int def)
 	return r;
 }
 
+int optcfg_get_flag(struct optcfg *cfg, const char *name)
+{
+	const char *v = optcfg_get(cfg, name, NULL);
+	static const char *t[] = {
+		"yes", "Yes", "YES", "true", "TRUE", "True", "1", "t", "T", "y", "Y", NULL
+	};
+	int i;
+
+	if (!v)
+		return 0;
+
+	for (i = 0; t[i]; i++)
+		if (!strcmp(t[i], v))
+			return 1;
+
+	return 0;
+}
+
 int optcfg_get_list(struct optcfg *cfg, const char *name, char ***list, unsigned *len)
 {
 	const char *v = optcfg_get(cfg, name, NULL);

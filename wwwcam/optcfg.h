@@ -40,6 +40,7 @@ int optcfg_del(struct optcfg *cfg, const char *name);
 
 const char* optcfg_get(struct optcfg *cfg, const char *name, const char *def);
 int optcfg_get_int(struct optcfg *cfg, const char *name, int def);
+int optcfg_get_flag(struct optcfg *cfg, const char *name);
 int optcfg_get_list(struct optcfg *cfg, const char *name, char ***list, unsigned *len);
 
 int optcfg_array_parse(const char *str, char ***array, unsigned *len);
