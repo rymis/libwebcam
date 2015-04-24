@@ -10,37 +10,6 @@
 #include "optcfg.h"
 #include "sound.h"
 
-static char main_page_html_raw[] =
-#include "index_html.inc"
-;
-
-static char main_page_html[16384];
-
-static void main_page_init(const char *nm)
-{
-	FILE *f;
-	ssize_t l;
-
-	if (nm) {
-		f = fopen(nm, "rt");
-		if (!f) {
-			fprintf(stderr, "Error: can't load `%s'\n", nm);
-			exit(EXIT_FAILURE);
-		}
-
-		l = fread(main_page_html, 1, sizeof(main_page_html) - 1, f);
-		fclose(f);
-		if (l < 0) {
-			fprintf(stderr, "Error: can't load `%s'\n", nm);
-			exit(EXIT_FAILURE);
-		}
-
-		main_page_html[l] = 0;
-	} else {
-		strcpy(main_page_html, main_page_html_raw);
-	}
-}
-
 /* Simple webcam-based http camera interface */
 
 static int exit_now = 0;
@@ -54,6 +23,8 @@ size_t FRAME_SZ = 0;
 char CAM_NAME[256] = "";
 struct snd_ctx *sound = NULL;
 
+char ROOT[256];
+
 static void LOCK(void)
 {
 }
@@ -62,11 +33,15 @@ static void UNLOCK(void)
 {
 }
 
+static const char *get_content_type(const char *fnm);
+static int send_f(mihl_cnx_t * cnx, char const *tag, char const *host, const char *filename);
 static void new_frame(void *ctx, webcam_t *cam, unsigned char *pixels, size_t bpl, size_t size);
 static int save_jpeg(unsigned char **buf, size_t *len, int quality, unsigned char *data, int width, int height, int bpl);
 static int main_page_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param);
 static int main_page_post(mihl_cnx_t *cnx, const char *tag, const char *host, int vars_cnt, char **names, char **values, void *param);
 static int current_image_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param);
+static int snd_enabled_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param);
+static int snd_wav_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param);
 static struct handler_st {
 	const char *path;
 	int (*get)(mihl_cnx_t *cnx, const char *tag, const char *host, void *param);
@@ -76,6 +51,8 @@ static struct handler_st {
 	{ "/", main_page_get, main_page_post, NULL },
 	{ "/image.jpg", current_image_get, NULL, NULL },
 	{ "/jpeg/*", current_image_get, NULL, NULL },
+	{ "/sound_enabled.txt", snd_enabled_get, NULL, NULL },
+	{ "/wav/*", snd_wav_get, NULL, NULL },
 	{ NULL, NULL, NULL, NULL }
 };
 
@@ -93,8 +70,8 @@ int main(int argc, char *argv[])
 			"Specify host name to listen", 0, NULL },
 		{ 'F', "fps",
 			"Specify how many frames per second will be captured", 0, "5" },
-		{ 'i', "index",
-			"Specify index.html file", 0, NULL },
+		{ 'r', "root",
+			"Specify root HTML directory", 0, NULL },
 		{ 'c', "config",
 			"Load configuration from file", OPTCFG_CFGFILE, NULL },
 		{ 'd', "delay",
@@ -121,6 +98,7 @@ int main(int argc, char *argv[])
 	const char *host;
 	int bsecs, freq, bits, stereo;
 	const char *snd_cmd = NULL;
+	const char *root = NULL;
 	
 	opts = optcfg_new();
 	if (!opts) {
@@ -150,7 +128,8 @@ int main(int argc, char *argv[])
 
 	host = optcfg_get(opts, "host", NULL);
 
-	main_page_init(optcfg_get(opts, "index", NULL));
+	root = optcfg_get(opts, "root", ".");
+	snprintf(ROOT, sizeof(ROOT), "%s/", root);
 
 	ctx = mihl_init(host, port, 16, MIHL_LOG_ERROR | MIHL_LOG_WARNING |
 			                                    MIHL_LOG_INFO | MIHL_LOG_INFO_VERBOSE);
@@ -243,6 +222,11 @@ int main(int argc, char *argv[])
 	webcam_stop(cam);
 	webcam_close(cam);
 
+	if (sound) {
+		snd_stop(sound);
+		sound = NULL;
+	}
+
 	printf("EXIT!\n");
 	mihl_end(ctx);
 
@@ -251,8 +235,7 @@ int main(int argc, char *argv[])
 
 static int main_page_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param)
 {
-	mihl_add(cnx, "%s", main_page_html);
-	mihl_send(cnx, NULL, "Content-Type: text/html\r\n");
+	send_f(cnx, tag, host, "index.html");
 	return 0;
 }
 
@@ -308,6 +291,53 @@ static int current_image_get(mihl_cnx_t *cnx, const char *tag, const char *host,
 		return -1;
 	}
 	UNLOCK();
+
+	return 0;
+}
+
+static int snd_enabled_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param)
+{
+	if (sound) {
+		mihl_add(cnx, "TRUE");
+	} else {
+		mihl_add(cnx, "FALSE");
+	}
+
+	mihl_send(cnx, NULL, "Content-Type: text/plain\r\n");
+	return 0;
+}
+
+static int snd_wav_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param)
+{
+	char header[512];
+	ssize_t len;
+	char date[80];
+	time_t curtime = time(NULL);
+	struct tm *gmt = gmtime(&curtime);
+	unsigned char *buf = NULL;
+	size_t buf_len = 0;
+	unsigned id = 0;
+
+	strftime(date, sizeof(date) - 1, "%c", gmt);
+
+	if (snd_buf(sound, &id, &buf, &buf_len)) {
+		return -1; /* TODO! */
+	}
+
+	len = snprintf(header, sizeof(header),
+		"HTTP/1.1 200 OK\r\n"
+		"Accept-Ranges: bytes\r\n"
+		"Content-Length: %u\r\n"
+		"Date: %s\r\n"
+		"Content-Type: audio/wave\r\n"
+		"Connection: keep-alive\r\n"
+		"Cache-Control: no-cache\r\n"
+		"\r\n", (unsigned)buf_len, date);
+
+	if (write_all(cnx->sockfd, header, len) != len ||
+			write_all(cnx->sockfd, buf, buf_len) != (ssize_t)buf_len) {
+		return -1;
+	}
 
 	return 0;
 }
@@ -392,4 +422,57 @@ static void new_frame(void *ctx, webcam_t *cam, unsigned char *pixels, size_t bp
 	UNLOCK();
 }
 
+static int send_f(mihl_cnx_t * cnx, char const *tag, char const *host, const char *filename)
+{
+	char path[512];
+	const char *content_type = get_content_type(filename);
+
+	if (strstr(filename, "..")) {
+		return -1;
+	}
+
+	snprintf(path, sizeof(path), "%s/%s", ROOT, filename);
+
+	return send_file(cnx, tag, path, content_type, 0);
+}
+
+static struct content_type {
+	const char *ext;
+	const char *type;
+} CONTENT_TYPES[] = {
+	{ "html", "text/html" },
+	{ "htm", "text/html" },
+	{ "HTML", "text/html" },
+	{ "HTM", "text/html" },
+	{ "js", "text/javascript" },
+	{ "css", "text/css" },
+	{ "txt", "text/plain" },
+	{ "gif", "image/gif" },
+	{ "jpeg", "image/jpeg" },
+	{ "jpg", "image/jpeg" },
+	{ "png", "image/png" },
+	{ "svg", "image/svg+xml" },
+	{ NULL, NULL }
+};
+
+static const char *get_content_type(const char *fnm)
+{
+	int ext;
+	int i;
+
+	ext = strlen(fnm);
+
+	while (ext > 0 && fnm[ext - 1] != '.')
+		--ext;
+
+	if (!ext) {
+		return "application/octet-stream";
+	}
+
+	for (i = 0; CONTENT_TYPES[i].ext; i++)
+		if (!strcmp(fnm + ext, CONTENT_TYPES[i].ext))
+			return CONTENT_TYPES[i].type;
+
+	return "application/octet-stream";
+}
 

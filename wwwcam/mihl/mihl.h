@@ -88,7 +88,7 @@ int mihl_dump_info(mihl_ctx_t *);
 int mihl_dump_info_handlers(mihl_ctx_t * ctx);
 
 int send_file(mihl_cnx_t * cnx, char const *tag, char const *filename,
-	      char *content_type, int close_connection);
+	      const char *content_type, int close_connection);
 
 char *mihl_authorization(mihl_cnx_t * cnx);
 

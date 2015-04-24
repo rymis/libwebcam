@@ -347,7 +347,7 @@ int mihl_end(mihl_ctx_t * ctx)
  * @return TBD
  */
 int send_file(mihl_cnx_t * cnx, char const *tag, char const *filename,
-	      char *content_type, int close_connection)
+	      const char *content_type, int close_connection)
 {
 	char *file;
 	int length;
