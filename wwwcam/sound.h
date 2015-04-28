@@ -18,7 +18,11 @@ struct snd_ctx {
 	struct snd_buf *bufs;
 	unsigned bufs_cnt;
 	size_t buf_size;
+
+	/* Current buffer index: */
 	unsigned cur;
+	/* Last buffer Id: */
+	unsigned last_id;
 
 	unsigned char header[SND_WAVE_HEADER_SIZE];
 
@@ -27,7 +31,6 @@ struct snd_ctx {
 	unsigned bits;
 	int stereo;
 
-	unsigned last;
 	int error;
 
 	FILE *src; /* Sound source */

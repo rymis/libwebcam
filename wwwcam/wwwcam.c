@@ -327,10 +327,12 @@ static int snd_wav_get(mihl_cnx_t *cnx, const char *tag, const char *host, void 
 
 	strftime(date, sizeof(date) - 1, "%c", gmt);
 
+	id = snd_current_buf(sound);
+	printf("SND: %u --- ", id);
 	if (snd_buf(sound, &id, &buf, &buf_len)) {
 		return -1; /* TODO! */
 	}
-	printf("SND: %u\n", id);
+	printf("%u\n", id);
 
 	len = snprintf(header, sizeof(header),
 		"HTTP/1.1 200 OK\r\n"

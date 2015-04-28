@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include "sound.h"
 
@@ -60,8 +62,8 @@ struct snd_ctx* snd_open(const char *cmdline, unsigned buf_secs, unsigned bufs_c
 	res->bits = bits;
 	res->stereo = stereo;
 	res->cur = 0;
+	res->last_id = 0;
 	res->stop = 0;
-	res->last = 0;
 	res->error = 0;
 
 	/* Header: */
@@ -104,7 +106,6 @@ struct snd_ctx* snd_open(const char *cmdline, unsigned buf_secs, unsigned bufs_c
 		}
 		memcpy(res->bufs[i].buf, res->header, SND_WAVE_HEADER_SIZE);
 		res->bufs[i].id = 0;
-		res->bufs[i].id = 0;
 	}
 	/* all buffers allocated */
 
@@ -140,13 +141,29 @@ struct snd_ctx* snd_open(const char *cmdline, unsigned buf_secs, unsigned bufs_c
 	return res;
 }
 
+static unsigned deltatime(struct timeval *from, struct timeval *to)
+{
+	return (to->tv_sec - from->tv_sec) * 1000000 + (to->tv_usec - from->tv_usec);
+}
+
 static int sound(void *ptr)
 {
 	struct snd_ctx *snd = ptr;
 	unsigned next;
+	struct timeval last;
+	struct timeval cur;
 
+	gettimeofday(&last, NULL);
+
+	snd->last_id = 1;
 	/*  Main function :) */
 	for (;;) {
+		gettimeofday(&cur, NULL);
+		if (deltatime(&last, &cur) < snd->secs * 1000000) {
+			usleep(10);
+			continue;
+		}
+
 		mtx_lock(&snd->lock);
 		if (snd->stop) {
 			mtx_unlock(&snd->lock);
@@ -164,10 +181,11 @@ static int sound(void *ptr)
 			break;
 		}
 
+		gettimeofday(&last, NULL);
+
 		mtx_lock(&snd->lock);
 		snd->cur = next;
-		snd->bufs[next].id = snd->last;
-		snd->last++;
+		snd->bufs[next].id = snd->last_id++;
 		mtx_unlock(&snd->lock);
 	}
 
@@ -244,7 +262,7 @@ unsigned snd_current_buf(struct snd_ctx *snd)
 		return 0;
 
 	mtx_lock(&snd->lock);
-	res = snd->last;
+	res = snd->bufs[snd->cur].id;
 	mtx_unlock(&snd->lock);
 
 	return res;
