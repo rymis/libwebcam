@@ -35,6 +35,7 @@ static void UNLOCK(void)
 
 static const char *get_content_type(const char *fnm);
 static int send_f(mihl_cnx_t * cnx, char const *tag, char const *host, const char *filename);
+static int file_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param);
 static void new_frame(void *ctx, webcam_t *cam, unsigned char *pixels, size_t bpl, size_t size);
 static int save_jpeg(unsigned char **buf, size_t *len, int quality, unsigned char *data, int width, int height, int bpl);
 static int main_page_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param);
@@ -49,10 +50,11 @@ static struct handler_st {
 	void *param;
 } handlers[] = {
 	{ "/", main_page_get, main_page_post, NULL },
+	{ "/jquery-2.1.3.min.js", file_get, NULL, "jquery-2.1.3.min.js" },
 	{ "/image.jpg", current_image_get, NULL, NULL },
 	{ "/jpeg/*", current_image_get, NULL, NULL },
 	{ "/sound_enabled.txt", snd_enabled_get, NULL, NULL },
-	{ "/wav/*", snd_wav_get, NULL, NULL },
+	{ "/audio.wav*", snd_wav_get, NULL, NULL },
 	{ NULL, NULL, NULL, NULL }
 };
 
@@ -196,7 +198,12 @@ int main(int argc, char *argv[])
 		bits = optcfg_get_int(opts, "bits", 8);
 		stereo = optcfg_get_flag(opts, "stereo");
 
+		printf("Starting sound...\n");
 		sound = snd_open(snd_cmd, bsecs, 8, freq, bits, stereo);
+
+		if (!sound) {
+			fprintf(stderr, "WARNING: can't open sound!\n");
+		}
 	}
 
 	for (;;) {
@@ -323,6 +330,7 @@ static int snd_wav_get(mihl_cnx_t *cnx, const char *tag, const char *host, void 
 	if (snd_buf(sound, &id, &buf, &buf_len)) {
 		return -1; /* TODO! */
 	}
+	printf("SND: %u\n", id);
 
 	len = snprintf(header, sizeof(header),
 		"HTTP/1.1 200 OK\r\n"
@@ -340,6 +348,11 @@ static int snd_wav_get(mihl_cnx_t *cnx, const char *tag, const char *host, void 
 	}
 
 	return 0;
+}
+
+static int file_get(mihl_cnx_t *cnx, const char *tag, const char *host, void *param)
+{
+	return send_f(cnx, tag, host, (const char*)param);
 }
 
 #if defined(WITH_LIBJPEG) && WITH_LIBJPEG

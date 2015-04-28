@@ -5,9 +5,12 @@
 	</head>
 	<body>
 		<img src="/image.jpg" name='webcam'>
+		<script type="text/javascript" src="jquery-2.1.3.min.js"></script>
 	        <script type="text/javascript">
+// TODO: create two images...
 var img = document.images['webcam'];
 var seq = 1;
+var snd_enabled = false;
 
 function isimagecomplete()
 {
@@ -33,9 +36,40 @@ function update()
 	setTimeout('update()', 50);
 }
 
+function sound_change_0()
+{
+	var rnd = Math.round(Math.random() * 1000000 + 1.0);
+	document.getElementById("wav1").play();
+	document.getElementById("wav0").src = "/audio.wav?seq=" + seq + "&rnd=" + rnd;
+}
+
+function sound_change_1()
+{
+	var rnd = Math.round(Math.random() * 1000000 + 1.0);
+	document.getElementById("wav0").play();
+	document.getElementById("wav1").src = "/audio.wav?seq=" + seq + "&rnd=" + rnd;
+}
+
+$.ajax("/sound_enabled.txt").done(
+		function(data)
+		{
+			var rnd = Math.round(Math.random() * 1000000 + 1.0);
+			if (data.indexOf("TRUE") >= 0) {
+				$("#sndinfo").append($("<audio controls preload id=\"wav0\" src=\"/audio.wav?seq=" + seq + "&rnd=" + rnd + "\"></audio>"));
+				$("#sndinfo").append($("<audio controls preload id=\"wav1\" src=\"/audio.wav?seq=" + seq + "&rnd=" + (rnd + 1) + "\"></audio>"));
+				document.getElementById("wav0").onended = sound_change_0;
+				document.getElementById("wav1").onended = sound_change_1;
+				document.getElementById("wav0").play();
+			} else {
+				$("#sndinfo").append($("<b>no sound... (" + data + ")</b>"));
+			}
+		}
+);
+
 setTimeout('update()', 10 * 50);
 	        </script>
-
+		<br/>
+		<div id="sndinfo"></div>
 	</body>
 </html>
 

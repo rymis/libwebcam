@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "sound.h"
 
@@ -91,7 +92,7 @@ struct snd_ctx* snd_open(const char *cmdline, unsigned buf_secs, unsigned bufs_c
 	wle32(res->header + 40, res->buf_size);
 
 	for (i = 0; i < bufs_cnt; i++) {
-		res->bufs[i].buf = calloc(1, buf_sz);
+		res->bufs[i].buf = calloc(1, buf_sz + SND_WAVE_HEADER_SIZE);
 		if (!res->bufs[i].buf) {
 			while (i > 0) {
 				free(res->bufs[i - 1].buf);
@@ -101,6 +102,7 @@ struct snd_ctx* snd_open(const char *cmdline, unsigned buf_secs, unsigned bufs_c
 			free(res);
 			return NULL;
 		}
+		memcpy(res->bufs[i].buf, res->header, SND_WAVE_HEADER_SIZE);
 		res->bufs[i].id = 0;
 		res->bufs[i].id = 0;
 	}
@@ -114,8 +116,9 @@ struct snd_ctx* snd_open(const char *cmdline, unsigned buf_secs, unsigned bufs_c
 		return NULL;
 	}
 
-	res->src = popen(cmdline, "rb");
+	res->src = popen(cmdline, "r");
 	if (!res->src) {
+		fprintf(stderr, "Error: can't exec `%s': %s\n", cmdline, strerror(errno));
 		mtx_destroy(&res->lock);
 		for (i = 0; i < res->bufs_cnt; i++)
 			free(res->bufs[i].buf);
@@ -154,7 +157,7 @@ static int sound(void *ptr)
 
 		mtx_unlock(&snd->lock);
 
-		if (fread(snd->bufs[next].buf, snd->buf_size, 1, snd->src) != 1) {
+		if (fread(snd->bufs[next].buf + SND_WAVE_HEADER_SIZE, snd->buf_size, 1, snd->src) != 1) {
 			mtx_lock(&snd->lock);
 			snd->error = 1;
 			mtx_unlock(&snd->lock);
@@ -217,7 +220,7 @@ int snd_buf(struct snd_ctx *snd, unsigned *id, unsigned char **buf, size_t *len)
 	for (i = 0; i < snd->bufs_cnt; i++) {
 		if (snd->bufs[i].id == *id) {
 			*buf = snd->bufs[i].buf;
-			*len = snd->buf_size;
+			*len = snd->buf_size + SND_WAVE_HEADER_SIZE;
 			mtx_unlock(&snd->lock);
 
 			return 0;
@@ -227,7 +230,7 @@ int snd_buf(struct snd_ctx *snd, unsigned *id, unsigned char **buf, size_t *len)
 	/* not found */
 	*id = snd->bufs[snd->cur].id;
 	*buf = snd->bufs[snd->cur].buf;
-	*len = snd->buf_size;
+	*len = snd->buf_size + SND_WAVE_HEADER_SIZE;
 
 	mtx_unlock(&snd->lock);
 
