@@ -1,9 +1,6 @@
 INCLUDE(CheckLibraryExists)
 
 INCLUDE_DIRECTORIES("${PROJECT_SOURCE_DIR}")
-INCLUDE_DIRECTORIES(mihl)
-
-ADD_SUBDIRECTORY(mihl)
 
 CHECK_INCLUDE_FILES(threads.h HAVE_THREADS_H)
 IF(HAVE_THREADS_H)
@@ -22,7 +19,7 @@ ELSE()
 	SET(JPGLIB "")
 ENDIF()
 
-ADD_EXECUTABLE(wwwcam wwwcam.c sound.c tinycthread.c optcfg.c ${JPGE_C})
+ADD_EXECUTABLE(wwwcam wwwcam.c sound.c tinycthread.c optcfg.c web/http.c ${JPGE_C})
 
 IF(HAVE_LIBPTHREAD)
 	SET(PTHLIB "pthread")
@@ -30,5 +27,5 @@ ELSE()
 	SET(PTHLIB)
 ENDIF()
 
-TARGET_LINK_LIBRARIES(wwwcam webcam ${LIBWEBCAM_LIBS} mihl ${JPGLIB} ${PTHLIB})
+TARGET_LINK_LIBRARIES(wwwcam webcam ${LIBWEBCAM_LIBS} ${JPGLIB} ${PTHLIB})
 
